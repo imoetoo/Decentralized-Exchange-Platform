@@ -1,0 +1,20 @@
+{
+  "name": "sc4053-project",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "hardhat": "^2.26.1"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "node": "^22.17.1",
+    "typescript": "^5.8.3",
+    "viem": "^2.33.0",
+    "vite": "^7.0.5"
+  }
+}
