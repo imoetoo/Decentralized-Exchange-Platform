@@ -74,7 +74,7 @@ contract Dex is ReentrancyGuard {
             IERC20(base).safeTransferFrom(msg.sender, address(this), baseAmount);
         } else {
             // for BUY order, lock quote tokens
-            uint256 needQuote = baseAmount * price; // 0.8+ 自动检查溢出
+            uint256 needQuote = baseAmount * price;
             IERC20(quote).safeTransferFrom(msg.sender, address(this), needQuote);
         }
         
