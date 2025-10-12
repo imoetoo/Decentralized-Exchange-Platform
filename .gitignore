@@ -12,7 +12,7 @@ states/
 
 # Optional
 .env
-.env.local
+.env.*
 node_modules
 
 # Hardhat / Solidity
