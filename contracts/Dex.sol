@@ -63,6 +63,47 @@ contract Dex is ReentrancyGuard {
         OrderBook storage book = books[key];
         return (book.buyOrders, book.sellOrders);
     }
+
+    function placeLimit(actionType action, address base, address quote, uint256 baseAmount, uint256 price) external nonReentrant returns (uint256 orderId) {
+        require(base != address(0) && quote != address(0), "Invalid token address");
+        require(base != quote, "Base and quote tokens must differ");
+        require(baseAmount > 0 && price > 0, "Amount and price must be positive");
+
+        if (action == actionType.SELL) {
+            // for SELL order, lock base tokens
+            IERC20(base).safeTransferFrom(msg.sender, address(this), baseAmount);
+        } else {
+            // for BUY order, lock quote tokens
+            uint256 needQuote = baseAmount * price; // 0.8+ 自动检查溢出
+            IERC20(quote).safeTransferFrom(msg.sender, address(this), needQuote);
+        }
+        
+        // Create and store the order
+        orderId = nextOrderId++;
+        orders[orderId] = Order({
+            id: orderId,
+            trader: msg.sender,
+            action: action,
+            base: base,
+            quote: quote,
+            amount: baseAmount,
+            filled: 0,
+            price: price,
+            ts: block.timestamp,
+            active: true
+        });
+
+        // Add to order book: Now only appending, no sorting
+        bytes32 key = _pairKey(base, quote);
+        OrderBook storage book = books[key];
+        if (action == actionType.BUY) {
+            book.buyOrders.push(orderId);
+        } else {
+            book.sellOrders.push(orderId);
+        }
+
+        emit NewOrder(orderId, msg.sender, action, base, quote, baseAmount, price);
+    }
 }
 
 
