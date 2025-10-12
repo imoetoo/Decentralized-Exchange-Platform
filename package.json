@@ -5,17 +5,13 @@
     "dev": "next dev -p 5173",
     "build": "next build",
     "start": "next start -p 5173",
-
     "compile": "hardhat compile",
     "clean": "hardhat clean",
     "node": "hardhat node --hostname 127.0.0.1 --port 6666",
-
     "deploy:mock": "hardhat ignition deploy ./ignition/modules/MockStablecoins.js --network localhost",
     "deploy:dex": "hardhat ignition deploy ./ignition/modules/Dex.js --network localhost",
-
-    "mint": "node scripts/mintTokensToAccount.js",
-    "seed": "node scripts/seedOrders.js",
-
+    "mint": "hardhat run --network localhost scripts/mintTokensToAccount.js",
+    "seed": "hardhat run --network localhost scripts/seedOrders.js",
     "test": "hardhat test"
   },
   "devDependencies": {

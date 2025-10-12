@@ -9,9 +9,11 @@ export default buildModule("MockStablecoinsModule", (m) => {
   );
 
   // Deploy Mock USDC (6 decimals like real USDC)
-  const mockUSDC = m.contract("MockStablecoin", ["Mock USD Coin", "USDC", 6], {
-    id: "MockUSDC",
-  });
+  const mockUSDC = m.contract(
+    "MockStablecoin", 
+    ["Mock USD Coin", "USDC", 6],
+    { id: "MockUSDC" }
+  );
 
   return { mockUSDT, mockUSDC };
 });
