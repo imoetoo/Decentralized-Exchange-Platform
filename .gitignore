@@ -29,4 +29,3 @@ coverage.json
 # Ignition / Deployments
 ignition/deployments/
 ignition/journal.jsonl
-package-lock.json

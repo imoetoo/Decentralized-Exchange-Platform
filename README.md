@@ -35,4 +35,5 @@ npm run dev
 
 **NOTE THAT FRONTEND AND BACKEND IS SEPERATED SO CD TO dex-frontend TO RUN FRONTEND**
 **There will be two `package.json` and two `package-lock.json`**
-**Do not commit changes to `package.son` and `package-lock.json`, these files are for version control**
+**⚠️ Do not commit changes to `package.json` or `package-lock.json` if you haven't intentionally added, removed, or updated any dependencies.**
+**(Small difference is possible, due to different version npm, name of local root folders and so on...)**
