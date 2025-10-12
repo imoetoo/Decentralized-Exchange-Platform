@@ -9,7 +9,7 @@ Backend: (Under root folder: SC4053-PROJECT)
 
 1. `npx hardhat node`
 
-this starts the hardhat testing development software. Copy the  account details onto mintTokenToAccount.js under testAccount
+this starts the hardhat testing development software. Copy the account details onto mintTokenToAccount.js under testAccount
 
 2. `npx hardhat ignition deploy ignition/modules/MockStablecoins.js --network localhost` (New terminal)
 
@@ -35,4 +35,4 @@ npm run dev
 
 **NOTE THAT FRONTEND AND BACKEND IS SEPERATED SO CD TO dex-frontend TO RUN FRONTEND**
 **There will be two `package.json` and two `package-lock.json`**
-**Do not commit changes to `package.son` and `package-lock.json`**
+**Do not commit changes to `package.son` and `package-lock.json`, these files are for version control**
