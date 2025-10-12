@@ -27,7 +27,7 @@ Front-end: (Under dex-frontend folder, `cd dex-frontend` first)
 npm install  
 ```
 
-1. Front-end
+2. Front-end
 
 ```bash
 npm run dev
@@ -35,3 +35,4 @@ npm run dev
 
 **NOTE THAT FRONTEND AND BACKEND IS SEPERATED SO CD TO dex-frontend TO RUN FRONTEND**
 **There will be two `package.json` and two `package-lock.json`**
+**Do not commit changes to `package.son` and `package-lock.json`**
