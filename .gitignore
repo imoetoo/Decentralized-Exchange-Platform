@@ -15,7 +15,6 @@ states/
 .env.local
 node_modules
 
-
 # Hardhat / Solidity
 cache/
 artifacts/
