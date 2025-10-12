@@ -14,3 +14,19 @@ states/
 .env
 .env.local
 node_modules
+
+
+# Hardhat / Solidity
+cache/
+artifacts/
+typechain/
+coverage/
+coverage.json
+
+# Hardhat Network
+.hardhat-network*
+.solidity-files-cache.json
+
+# Ignition / Deployments
+ignition/deployments/
+ignition/journal.jsonl
