@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract Dex is ReentrancyGuard {
     using SafeERC20 for IERC20;
+    uint256 private constant PRICE_PRECISION = 1e6; // Price precision (e.g., 1 USDC = 1,000,000 microUSDC)
 
     // 0 for BUY, 1 for SELL
     enum actionType { BUY, SELL }
@@ -74,7 +75,7 @@ contract Dex is ReentrancyGuard {
             IERC20(base).safeTransferFrom(msg.sender, address(this), baseAmount);
         } else {
             // for BUY order, lock quote tokens
-            uint256 needQuote = baseAmount * price;
+            uint256 needQuote = (baseAmount * price) / PRICE_PRECISION;
             IERC20(quote).safeTransferFrom(msg.sender, address(this), needQuote);
         }
         
@@ -196,7 +197,7 @@ contract Dex is ReentrancyGuard {
             uint256 tradedBase = takerRemain < makerRemain ? takerRemain : makerRemain;
 
             // Compute trade quote amount
-            uint256 tradedQuote = tradedBase * maker.price;
+            uint256 tradedQuote = (tradedBase * maker.price) / PRICE_PRECISION;
 
             // Calculate the amount after matching
             if (taker.action == actionType.BUY) {
@@ -237,7 +238,7 @@ contract Dex is ReentrancyGuard {
                 // *But the actual spentQuote might be lower if the order is filled at a lower price based on the order book
                 // *So SELL order must be spent in it's price, but BUY order depend on the actual filled price by the SELL orders
                 if (taker.action == actionType.BUY) {
-                    uint256 deposited = taker.amount * taker.price;
+                    uint256 deposited = (taker.amount * taker.price) / PRICE_PRECISION;
                     if (deposited > spentQuote) {
                         // Refund unused quote tokens to taker and stay in the OrderBook
                         IERC20(taker.quote).safeTransfer(taker.trader, deposited - spentQuote);
@@ -267,7 +268,7 @@ contract Dex is ReentrancyGuard {
             } 
             // Refund "money" for BUY, total money spent depend on the actual filled price, not "expected" price by the 
             else {
-                uint256 refundQuote = remainingBase * o.price;
+                uint256 refundQuote = (remainingBase * o.price) / PRICE_PRECISION;
                 IERC20(o.quote).safeTransfer(o.trader, refundQuote);
             }
         }
