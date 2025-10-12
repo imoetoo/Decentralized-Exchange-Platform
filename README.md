@@ -1,4 +1,11 @@
-Backend:
+```bash
+git clone https://github.com/ZMB000/SC4053-Project.git
+cd SC4053-Project
+```
+
+Backend: (Under root folder: SC4053-PROJECT)
+
+`npm install`
 
 1. `npx hardhat node`
 
@@ -12,23 +19,19 @@ this runs the smart contract, and deploys it into the test blockchain. Record th
 
 this gets you the test tokens for USDC and USDT
 
-Front-end:
+Front-end: (Under dex-frontend folder, `cd dex-frontend` first)
 
-1. Clone the repo
-
-```bash
-git clone https://github.com/ZMB000/SC4053-Project.git
-cd SC4053-Project
-```
-
-2. env init (https://nodejs.org/en/download to install next.js)
+1. env init (https://nodejs.org/en/download to install next.js)
 
 ```bash
-npm install 
+npm install  
 ```
 
-3. Front-end
+1. Front-end
 
 ```bash
 npm run dev
 ```
+
+**NOTE THAT FRONTEND AND BACKEND IS SEPERATED SO CD TO dex-frontend TO RUN FRONTEND**
+**There will be two `package.json` and two `package-lock.json`**
