@@ -1,0 +1,428 @@
+"use client";
+
+import { useAccount } from "wagmi";
+import Link from "next/link";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import {
+  Container,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  Box,
+} from "@mui/material";
+import { SwapHoriz, Speed, Security } from "@mui/icons-material";
+
+// Import styles
+import * as homeContentStyles from "@/styles/homeContentStyles";
+import * as commonStyles from "@/styles/commonStyles";
+
+export default function HomeContent() {
+  const { isConnected } = useAccount();
+
+  return (
+    <main className={homeContentStyles.classNames.mainContainer}>
+      {/* Hero Section */}
+      <section className={homeContentStyles.classNames.heroSection}>
+        {/* Background Gradient color*/}
+        <div className={homeContentStyles.classNames.heroBackgroundPattern}>
+          <div
+            className={homeContentStyles.classNames.heroBackgroundGradient1}
+          />
+          <div
+            className={homeContentStyles.classNames.heroBackgroundGradient2}
+          />
+        </div>
+
+        <Container maxWidth="lg" sx={homeContentStyles.heroContainerStyles}>
+          {/* Main Heading */}
+          <Typography variant="h1" sx={homeContentStyles.heroTitleStyles}>
+            Decentralized Exchange
+            <br />
+            For Stablecoin Trading
+          </Typography>
+
+          {/* Subtitle */}
+          <Typography variant="h5" sx={homeContentStyles.heroSubtitleStyles}>
+            Trade USDT and USDC with an on-chain order book. Place limit orders,
+            discover the best prices, and trade peer-to-peer with zero
+            intermediaries.
+          </Typography>
+
+          {/* Connection Status */}
+          {!isConnected ? (
+            <Box sx={homeContentStyles.connectionStatusBoxStyles}>
+              <Typography
+                sx={homeContentStyles.connectionStatusTextStyles.disconnected}
+              >
+                Please connect your wallet to start trading
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={homeContentStyles.connectionStatusBoxStyles}>
+              <Typography
+                sx={homeContentStyles.connectionStatusTextStyles.connected}
+              >
+                Wallet Connected - Ready to trade!
+              </Typography>
+            </Box>
+          )}
+
+          {/* CTA Buttons */}
+          <div className={homeContentStyles.classNames.ctaButtonContainer}>
+            {isConnected ? (
+              <Link href="/market">
+                <Button
+                  variant="contained"
+                  size="large"
+                  sx={homeContentStyles.primaryGradientButtonStyles}
+                >
+                  Start Trading Now
+                </Button>
+              </Link>
+            ) : (
+              <div
+                className={homeContentStyles.classNames.connectButtonContainer}
+              >
+                <ConnectButton.Custom>
+                  {({ openConnectModal }) => (
+                    <Button
+                      onClick={openConnectModal}
+                      variant="contained"
+                      size="large"
+                      sx={homeContentStyles.primaryGradientButtonStyles}
+                    >
+                      Connect Wallet to Start
+                    </Button>
+                  )}
+                </ConnectButton.Custom>
+              </div>
+            )}
+            <Link href="/market">
+              <Button
+                variant="outlined"
+                size="large"
+                sx={homeContentStyles.outlinedButtonStyles}
+              >
+                Explore Order Books
+              </Button>
+            </Link>
+          </div>
+
+          {/* Stats */}
+          <div className={homeContentStyles.classNames.statsGrid}>
+            <div className={homeContentStyles.classNames.statsItem}>
+              <Typography
+                variant="h3"
+                sx={homeContentStyles.statsValueStyles.blue}
+              >
+                $0M+
+              </Typography>
+              <Typography sx={homeContentStyles.statsLabelStyles}>
+                Total Trading Volume
+              </Typography>
+            </div>
+            <div className={homeContentStyles.classNames.statsItem}>
+              <Typography
+                variant="h3"
+                sx={homeContentStyles.statsValueStyles.purple}
+              >
+                2
+              </Typography>
+              <Typography sx={homeContentStyles.statsLabelStyles}>
+                Trading Pairs
+              </Typography>
+            </div>
+            <div className={homeContentStyles.classNames.statsItem}>
+              <Typography
+                variant="h3"
+                sx={homeContentStyles.statsValueStyles.green}
+              >
+                0+
+              </Typography>
+              <Typography sx={homeContentStyles.statsLabelStyles}>
+                Active Traders
+              </Typography>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* Features Section */}
+      <section className={homeContentStyles.classNames.featuresSection}>
+        <Container maxWidth="lg" sx={homeContentStyles.sectionContainerStyles}>
+          <div className={homeContentStyles.classNames.sectionTextCenter}>
+            <Typography
+              variant="h2"
+              sx={{
+                ...homeContentStyles.sectionTitleStyles,
+                ...commonStyles.commonSpacing.mediumMargin,
+              }}
+            >
+              Why Trade on Our DEX?
+            </Typography>
+            <Typography
+              variant="h6"
+              sx={homeContentStyles.sectionSubtitleStyles}
+            >
+              Built for traders with transparency, security, and full control
+            </Typography>
+          </div>
+
+          {/* Features Grid */}
+          <div className={homeContentStyles.classNames.featuresGrid}>
+            {/* On-Chain Order Book */}
+            <Card
+              sx={{
+                ...homeContentStyles.featureCardStyles,
+                ...homeContentStyles.featureCardHoverStyles.blue,
+              }}
+            >
+              <CardContent sx={homeContentStyles.cardContentStyles}>
+                <div
+                  className={
+                    homeContentStyles.classNames.featureIconContainer.blue
+                  }
+                >
+                  <SwapHoriz sx={{ color: "white" }} fontSize="large" />
+                </div>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    ...homeContentStyles.cardTitleStyles,
+                    ...commonStyles.commonSpacing.smallMargin,
+                  }}
+                >
+                  On-Chain Order Book
+                </Typography>
+                <Typography
+                  sx={{
+                    ...homeContentStyles.cardDescriptionStyles,
+                    ...commonStyles.commonSpacing.mediumMargin,
+                  }}
+                >
+                  Trade with a fully decentralized order book. All orders are
+                  stored on-chain for complete transparency and trustlessness.
+                </Typography>
+                <Link href="/market">
+                  <Button
+                    variant="outlined"
+                    sx={homeContentStyles.featureButtonStyles.blue}
+                  >
+                    View Order Books
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Limit Orders */}
+            <Card
+              sx={{
+                ...homeContentStyles.featureCardStyles,
+                ...homeContentStyles.featureCardHoverStyles.green,
+              }}
+            >
+              <CardContent sx={homeContentStyles.cardContentStyles}>
+                <div
+                  className={
+                    homeContentStyles.classNames.featureIconContainer.green
+                  }
+                >
+                  <Speed sx={{ color: "white" }} fontSize="large" />
+                </div>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    ...homeContentStyles.cardTitleStyles,
+                    ...commonStyles.commonSpacing.smallMargin,
+                  }}
+                >
+                  Limit Orders
+                </Typography>
+                <Typography
+                  sx={{
+                    ...homeContentStyles.cardDescriptionStyles,
+                    ...commonStyles.commonSpacing.mediumMargin,
+                  }}
+                >
+                  Place limit orders at your desired price. Orders are
+                  automatically matched when conditions are met, giving you full
+                  control.
+                </Typography>
+                <Link href="/market">
+                  <Button
+                    variant="outlined"
+                    sx={homeContentStyles.featureButtonStyles.green}
+                  >
+                    Start Trading
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Secure Trading */}
+            <Card
+              sx={{
+                ...homeContentStyles.featureCardStyles,
+                ...homeContentStyles.featureCardHoverStyles.purple,
+              }}
+            >
+              <CardContent sx={homeContentStyles.cardContentStyles}>
+                <div
+                  className={
+                    homeContentStyles.classNames.featureIconContainer.purple
+                  }
+                >
+                  <Security sx={{ color: "white" }} fontSize="large" />
+                </div>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    ...homeContentStyles.cardTitleStyles,
+                    ...commonStyles.commonSpacing.smallMargin,
+                  }}
+                >
+                  Secure & Trustless
+                </Typography>
+                <Typography
+                  sx={{
+                    ...homeContentStyles.cardDescriptionStyles,
+                    ...commonStyles.commonSpacing.mediumMargin,
+                  }}
+                >
+                  Trade directly from your wallet with no intermediaries. Your
+                  funds stay in your control until orders are executed.
+                </Typography>
+                <Link href="/market">
+                  <Button
+                    variant="outlined"
+                    sx={homeContentStyles.featureButtonStyles.purple}
+                    disabled={!isConnected}
+                  >
+                    {isConnected ? "Trade Now" : "Connect Wallet"}
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        </Container>
+      </section>
+
+      {/* How It Works Section */}
+      <section className={homeContentStyles.classNames.howItWorksSection}>
+        <Container maxWidth="lg" sx={homeContentStyles.sectionContainerStyles}>
+          <div className={homeContentStyles.classNames.sectionTextCenter}>
+            <Typography
+              variant="h2"
+              sx={{
+                ...homeContentStyles.sectionTitleStyles,
+                ...commonStyles.commonSpacing.mediumMargin,
+              }}
+            >
+              How It Works
+            </Typography>
+            <Typography
+              variant="h6"
+              sx={homeContentStyles.sectionSubtitleStyles}
+            >
+              Three simple steps to start trading on our decentralized exchange
+            </Typography>
+          </div>
+
+          <div className={homeContentStyles.classNames.howItWorksGrid}>
+            <div className={homeContentStyles.classNames.howItWorksItem}>
+              <div
+                className={
+                  homeContentStyles.classNames.howItWorksStepIcon.step1
+                }
+              >
+                1
+              </div>
+              <Typography
+                variant="h5"
+                sx={homeContentStyles.howItWorksStepTitleStyles}
+              >
+                Connect Wallet
+              </Typography>
+              <Typography
+                sx={homeContentStyles.howItWorksStepDescriptionStyles}
+              >
+                Connect your Web3 wallet to access the decentralized exchange
+                and view live order books.
+              </Typography>
+            </div>
+
+            <div className={homeContentStyles.classNames.howItWorksItem}>
+              <div
+                className={
+                  homeContentStyles.classNames.howItWorksStepIcon.step2
+                }
+              >
+                2
+              </div>
+              <Typography
+                variant="h5"
+                sx={homeContentStyles.howItWorksStepTitleStyles}
+              >
+                Place Orders
+              </Typography>
+              <Typography
+                sx={homeContentStyles.howItWorksStepDescriptionStyles}
+              >
+                Choose your trading pair, set your desired price, and place
+                limit orders to buy or sell USDT/USDC.
+              </Typography>
+            </div>
+
+            <div className={homeContentStyles.classNames.howItWorksItem}>
+              <div
+                className={
+                  homeContentStyles.classNames.howItWorksStepIcon.step3
+                }
+              >
+                3
+              </div>
+              <Typography
+                variant="h5"
+                sx={homeContentStyles.howItWorksStepTitleStyles}
+              >
+                Execute Trades
+              </Typography>
+              <Typography
+                sx={homeContentStyles.howItWorksStepDescriptionStyles}
+              >
+                Orders are automatically matched on-chain when prices align.
+                Trade securely with full transparency.
+              </Typography>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* CTA Section */}
+      <section className={homeContentStyles.classNames.ctaSection}>
+        <Container
+          maxWidth="lg"
+          sx={homeContentStyles.ctaSectionContainerStyles}
+        >
+          <Typography variant="h2" sx={homeContentStyles.ctaTitleStyles}>
+            Ready to Start Trading?
+          </Typography>
+          <Typography variant="h6" sx={homeContentStyles.ctaSubtitleStyles}>
+            Join the decentralized exchange revolution today
+          </Typography>
+          <Link href="/market">
+            <Button
+              variant="contained"
+              size="large"
+              sx={homeContentStyles.ctaButtonStyles}
+              disabled={!isConnected}
+            >
+              {isConnected ? "Trade Now" : "Connect Wallet First"}
+            </Button>
+          </Link>
+        </Container>
+      </section>
+    </main>
+  );
+}

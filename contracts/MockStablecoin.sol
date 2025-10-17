@@ -33,4 +33,18 @@ contract MockStablecoin is ERC20 {
     function faucet() external {
         _mint(msg.sender, 10000 * 10**_decimals); // 10k tokens
     }
+    
+    // Check balance of an account
+    function checkBalance(address account) external view returns (uint256) {
+        return balanceOf(account);
+    }
+    
+    // Check multiple balances at once
+    function checkBalances(address[] calldata accounts) external view returns (uint256[] memory) {
+        uint256[] memory balances = new uint256[](accounts.length);
+        for (uint256 i = 0; i < accounts.length; i++) {
+            balances[i] = balanceOf(accounts[i]);
+        }
+        return balances;
+    }
 }
