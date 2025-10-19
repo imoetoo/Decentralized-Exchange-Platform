@@ -1,15 +1,20 @@
 /** 
-This script checks the balances of Alice and Bob for USDT, USDC, and ETH,
+This script checks the balances of Alice and Bob for USDT, USDC, and ETH.
+
+Note that it assumes that Alice and Bob's addresses are the second and third accounts provided by Hardhat's local node.
+Whereas the first account is typically used as the deployer account.
 */
 const hre = require("hardhat");
 const { ethers } = hre;
+const getAddresses = require("./addresses");
 
 async function main() {
   console.log("Checking token balances for Alice and Bob...\n");
 
   // Get deployed contract addresses
-  const USDT_ADDRESS = "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0";
-  const USDC_ADDRESS = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e";
+  const addresses = getAddresses();
+  const USDT_ADDRESS = addresses.MockUSDT;
+  const USDC_ADDRESS = addresses.MockUSDC;
 
   // Get Alice and Bob's accounts from Hardhat
   const [deployer, alice, bob] = await ethers.getSigners();
