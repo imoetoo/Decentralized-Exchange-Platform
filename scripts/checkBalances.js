@@ -104,10 +104,10 @@ const getAddresses = require("./addresses");
 async function main() {
   console.log("Checking token balances for all deployed mock coins...\n");
 
-  // 所有已部署合约地址
+  // Get deployed contract addresses
   const addressesMap = getAddresses();
 
-  // 取出所有 Mock 代币（形如 MockUSDT、MockUSDC、MockDAI...）
+  // Take all mock coin symbols
   const mockSymbols = Object.keys(addressesMap)
     .filter((k) => k.startsWith("Mock"))
     .map((k) => k.replace("Mock", "")); // ["USDT","USDC","DAI",...]
@@ -116,7 +116,7 @@ async function main() {
     throw new Error("No mock tokens found in addresses()");
   }
 
-  // 获取账户（默认使用 Alice/Bob/Carol）
+  // Now we hardcode three accounts: Alice, Bob, Carol
   const [deployer, alice, bob, carol] = await ethers.getSigners();
   const who = [alice.address, bob.address, carol.address];
 
@@ -132,7 +132,7 @@ async function main() {
     "function checkBalances(address[] calldata) view returns (uint256[])",
   ];
 
-  // 逐个代币输出余额
+  // All coins balances
   for (const sym of mockSymbols) {
     const tokenAddr = addressesMap[`Mock${sym}`];
     const token = await ethers.getContractAt(erc20Abi, tokenAddr);
@@ -156,7 +156,7 @@ async function main() {
     // console.log(`TOTAL          : ${ethers.formatUnits(total, decimals)} ${symbol}\n`);
   }
 
-  // ETH 余额（可选）
+  // ETH Balances
   console.log("ETH Balances");
   console.log("----------------------------------------");
   const [aEth, bEth, cEth] = await Promise.all([
