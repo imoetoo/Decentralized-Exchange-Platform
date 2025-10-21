@@ -63,51 +63,97 @@
 //   });
 
 // ***Use your own generated addresses from `npm run node` accounts; Both in mintTokensToAccount.js and seedOrders.js***
+// const hre = require("hardhat");
+// const { ethers } = hre;
+// const getAddresses = require("./addresses");
+
+// async function main() {
+//   const { MockUSDT, MockUSDC } = getAddresses();
+//   console.log("Using addresses:", { MockUSDT, MockUSDC });
+//   const [deployer, alice, bob] = await ethers.getSigners();
+
+//   const usdt = await ethers.getContractAt("MockStablecoin", MockUSDT);
+//   const usdc = await ethers.getContractAt("MockStablecoin", MockUSDC);
+
+//   const amt = ethers.parseUnits("100000", 6);
+
+//   await (await usdt.mint(alice.address, amt)).wait();
+//   await (await usdc.mint(alice.address, amt)).wait();
+//   await (await usdt.mint(bob.address, amt)).wait();
+//   await (await usdc.mint(bob.address, amt)).wait();
+
+//   console.log("Minted to:", { alice: alice.address, bob: bob.address });
+
+//   // Check individual balances
+//   console.log("\n💰 Checking individual balances...");
+//   const aliceUSDT = await usdt.checkBalance(alice.address);
+//   const aliceUSDC = await usdc.checkBalance(alice.address);
+//   const bobUSDT = await usdt.checkBalance(bob.address);
+//   const bobUSDC = await usdc.checkBalance(bob.address);
+
+//   console.log(`Alice USDT: ${ethers.formatUnits(aliceUSDT, 6)}`);
+//   console.log(`Alice USDC: ${ethers.formatUnits(aliceUSDC, 6)}`);
+//   console.log(`Bob USDT: ${ethers.formatUnits(bobUSDT, 6)}`);
+//   console.log(`Bob USDC: ${ethers.formatUnits(bobUSDC, 6)}`);
+
+//   // Check multiple balances at once
+//   console.log("\n📊 Checking multiple balances at once...");
+//   const usdtBalances = await usdt.checkBalances([alice.address, bob.address]);
+//   const usdcBalances = await usdc.checkBalances([alice.address, bob.address]);
+
+//   console.log(
+//     "USDT balances:",
+//     usdtBalances.map((b) => ethers.formatUnits(b, 6))
+//   );
+//   console.log(
+//     "USDC balances:",
+//     usdcBalances.map((b) => ethers.formatUnits(b, 6))
+//   );
+// }
+// main().catch((e) => (console.error(e), process.exit(1)));
+
+// scripts/mint_tokens_to_account.js
 const hre = require("hardhat");
 const { ethers } = hre;
 const getAddresses = require("./addresses");
 
 async function main() {
-  const { MockUSDT, MockUSDC } = getAddresses();
-  console.log("Using addresses:", { MockUSDT, MockUSDC });
-  const [deployer, alice, bob] = await ethers.getSigners();
+  const addresses = getAddresses();
+  const [deployer, alice, bob, carol] = await ethers.getSigners();
 
-  const usdt = await ethers.getContractAt("MockStablecoin", MockUSDT);
-  const usdc = await ethers.getContractAt("MockStablecoin", MockUSDC);
+  // Only deployed token
+  const symbols = ["USDT", "USDC", "DAI", "BUSD", "TUSD", "USDP", "FDUSD"]
+    .filter((s) => `Mock${s}` in addresses);
 
-  const amt = ethers.parseUnits("100000", 6);
+  if (symbols.length === 0) {
+    throw new Error("No mock tokens found in addresses()");
+  }
 
-  await (await usdt.mint(alice.address, amt)).wait();
-  await (await usdc.mint(alice.address, amt)).wait();
-  await (await usdt.mint(bob.address, amt)).wait();
-  await (await usdc.mint(bob.address, amt)).wait();
+  console.log("Using addresses:", addresses);
+  console.log("Minting to:", {
+    alice: alice.address,
+    bob: bob.address,
+    carol: carol.address,
+  });
 
-  console.log("Minted to:", { alice: alice.address, bob: bob.address });
+  // Amount to mint to account
+  const mintPerAccount = ethers.parseUnits("100000", 6); // 100k
 
-  // Check individual balances
-  console.log("\n💰 Checking individual balances...");
-  const aliceUSDT = await usdt.checkBalance(alice.address);
-  const aliceUSDC = await usdc.checkBalance(alice.address);
-  const bobUSDT = await usdt.checkBalance(bob.address);
-  const bobUSDC = await usdc.checkBalance(bob.address);
+  for (const sym of symbols) {
+    const addr = addresses[`Mock${sym}`];
+    const token = await ethers.getContractAt("MockStablecoin", addr);
 
-  console.log(`Alice USDT: ${ethers.formatUnits(aliceUSDT, 6)}`);
-  console.log(`Alice USDC: ${ethers.formatUnits(aliceUSDC, 6)}`);
-  console.log(`Bob USDT: ${ethers.formatUnits(bobUSDT, 6)}`);
-  console.log(`Bob USDC: ${ethers.formatUnits(bobUSDC, 6)}`);
+    // Three test people
+    await (await token.mint(alice.address, mintPerAccount)).wait();
+    await (await token.mint(bob.address,   mintPerAccount)).wait();
+    await (await token.mint(carol.address, mintPerAccount)).wait();
 
-  // Check multiple balances at once
-  console.log("\n📊 Checking multiple balances at once...");
-  const usdtBalances = await usdt.checkBalances([alice.address, bob.address]);
-  const usdcBalances = await usdc.checkBalances([alice.address, bob.address]);
+    // Check balance
+    const balances = await token.checkBalances([ alice.address, bob.address, carol.address,]);
+    console.log(`${sym} balances:`, balances.map((b) => ethers.formatUnits(b, 6)));
+  }
 
-  console.log(
-    "USDT balances:",
-    usdtBalances.map((b) => ethers.formatUnits(b, 6))
-  );
-  console.log(
-    "USDC balances:",
-    usdcBalances.map((b) => ethers.formatUnits(b, 6))
-  );
+  console.log("✅ Minting done.");
 }
+
 main().catch((e) => (console.error(e), process.exit(1)));
