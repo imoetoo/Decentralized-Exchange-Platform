@@ -1,17 +1,21 @@
-import deployments from "../../ignition/deployments/chain-31337/deployed_addresses.json";
+// import deployments from "../../ignition/deployments/chain-31337/deployed_addresses.json";
 
-// Contract addresses from deployment
-export const DEX_CONTRACT_ADDRESS = deployments[
-  "DexModule#Dex"
-] as `0x${string}`;
+// // Contract addresses from deployment
+// export const DEX_CONTRACT_ADDRESS = deployments[
+//   "DexModule#Dex"
+// ] as `0x${string}`;
 
-// Mock stablecoin addresses from deployment (for localhost testing)
-export const USDT_ADDRESS = deployments[
-  "MockStablecoinsModule#MockUSDT"
-] as `0x${string}`;
-export const USDC_ADDRESS = deployments[
-  "MockStablecoinsModule#MockUSDC"
-] as `0x${string}`;
+// // Mock stablecoin addresses from deployment (for localhost testing)
+// export const USDT_ADDRESS = deployments[
+//   "MockStablecoinsModule#MockUSDT"
+// ] as `0x${string}`;
+// export const USDC_ADDRESS = deployments[
+//   "MockStablecoinsModule#MockUSDC"
+// ] as `0x${string}`;
+
+export const DEX_CONTRACT_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+export const USDT_ADDRESS = '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0';
+export const USDC_ADDRESS = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
 
 // Token decimals
 export const STABLECOIN_DECIMALS = 6; // USDT and USDC typically use 6 decimals
