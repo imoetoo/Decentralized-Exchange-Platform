@@ -22,8 +22,10 @@ import {
   FormControl,
   CircularProgress,
   Alert,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
-import { ArrowBack, SwapHoriz } from "@mui/icons-material";
+import { ArrowBack, SwapHoriz, Close } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAccount } from "wagmi";
@@ -65,8 +67,11 @@ export default function TradingPage() {
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");
   const [pendingAction, setPendingAction] = useState<
-    "approve" | "order" | null
+    "approve" | "order" | "cancel" | null
   >(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<bigint | null>(
+    null
+  );
   const [showAlert, setShowAlert] = useState(true);
 
   // Get token pair info
@@ -77,6 +82,7 @@ export default function TradingPage() {
     orderBook,
     isLoadingOrders,
     placeLimitOrder,
+    cancelOrder,
     approveToken,
     isPending,
     isConfirming,
@@ -84,7 +90,8 @@ export default function TradingPage() {
     error,
     baseAllowance,
     quoteAllowance,
-    balance,
+    baseBalance,
+    quoteBalance,
   } = useDex(pairInfo?.base, pairInfo?.quote);
 
   // Reset form after successful order placement (not approval)
@@ -99,6 +106,16 @@ export default function TradingPage() {
         setPendingAction(null);
         setShowAlert(false); // Hide alert after 10 seconds
       }, 10000); // Show success message for 10 seconds
+      return () => clearTimeout(timer);
+    } else if (isConfirmed && pendingAction === "cancel") {
+      // Show alert immediately
+      setShowAlert(true);
+      // Reset cancel state after confirmation
+      const timer = setTimeout(() => {
+        setPendingAction(null);
+        setCancellingOrderId(null);
+        setShowAlert(false);
+      }, 10000);
       return () => clearTimeout(timer);
     } else if (isConfirmed && pendingAction === "approve") {
       // Show alert immediately
@@ -191,6 +208,28 @@ export default function TradingPage() {
     }
   };
 
+  const handleCancelOrder = async (orderId: bigint) => {
+    if (!isConnected) {
+      alert("Please connect your wallet");
+      return;
+    }
+
+    try {
+      setShowAlert(true);
+      setPendingAction("cancel");
+      setCancellingOrderId(orderId);
+      await cancelOrder(orderId);
+    } catch (err) {
+      console.error("Error cancelling order:", err);
+      setPendingAction(null);
+      setCancellingOrderId(null);
+    }
+  };
+
+  const isUserOrder = (order: any) => {
+    return address && order.trader.toLowerCase() === address.toLowerCase();
+  };
+
   const needsApproval = () => {
     if (!amount || !price) return false;
 
@@ -212,6 +251,32 @@ export default function TradingPage() {
   const calculateTotal = () => {
     if (!amount || !price) return "0.00";
     return (parseFloat(amount) * parseFloat(price)).toFixed(6);
+  };
+
+  const getCurrentBalance = () => {
+    if (tradeType === OrderType.SELL) {
+      return baseBalance || BigInt(0);
+    } else {
+      return quoteBalance || BigInt(0);
+    }
+  };
+
+  const hasInsufficientBalance = () => {
+    if (!amount || !price) return false;
+
+    const currentBalance = getCurrentBalance();
+
+    if (tradeType === OrderType.SELL) {
+      // For SELL orders, check if we have enough base tokens
+      const requiredAmount = BigInt(Math.floor(parseFloat(amount) * 1e6));
+      return currentBalance < requiredAmount;
+    } else {
+      // For BUY orders, check if we have enough quote tokens (total cost)
+      const requiredAmount = BigInt(
+        Math.floor(parseFloat(calculateTotal()) * 1e6)
+      );
+      return currentBalance < requiredAmount;
+    }
   };
 
   return (
@@ -263,11 +328,19 @@ export default function TradingPage() {
             {error && `Error: ${error.message}`}
             {isPending &&
               `Please confirm the ${
-                pendingAction === "approve" ? "approval" : "order"
+                pendingAction === "approve"
+                  ? "approval"
+                  : pendingAction === "cancel"
+                  ? "cancellation"
+                  : "order"
               } in your wallet...`}
             {isConfirming &&
               `${
-                pendingAction === "approve" ? "Approval" : "Order"
+                pendingAction === "approve"
+                  ? "Approval"
+                  : pendingAction === "cancel"
+                  ? "Cancellation"
+                  : "Order"
               } is being confirmed...`}
             {isConfirmed &&
               pendingAction === "approve" &&
@@ -275,6 +348,9 @@ export default function TradingPage() {
             {isConfirmed &&
               pendingAction === "order" &&
               "Order placed successfully!"}
+            {isConfirmed &&
+              pendingAction === "cancel" &&
+              "Order cancelled successfully!"}
           </Alert>
         )}
 
@@ -338,6 +414,15 @@ export default function TradingPage() {
                             >
                               Total
                             </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "text.secondary",
+                                fontWeight: "bold",
+                                width: "60px",
+                              }}
+                            >
+                              Action
+                            </TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -351,6 +436,10 @@ export default function TradingPage() {
                                 parseFloat(amountFormatted) *
                                 parseFloat(priceFormatted)
                               ).toFixed(6);
+                              const isOwner = isUserOrder(order);
+                              const isCancelling =
+                                pendingAction === "cancel" &&
+                                cancellingOrderId === order.id;
 
                               return (
                                 <TableRow
@@ -370,13 +459,48 @@ export default function TradingPage() {
                                   <TableCell sx={{ color: "text.secondary" }}>
                                     {total}
                                   </TableCell>
+                                  <TableCell>
+                                    {isOwner && (
+                                      <Tooltip title="Cancel order">
+                                        <IconButton
+                                          size="small"
+                                          onClick={() =>
+                                            handleCancelOrder(order.id)
+                                          }
+                                          disabled={
+                                            isPending ||
+                                            isConfirming ||
+                                            isCancelling
+                                          }
+                                          sx={{
+                                            color: "#ef4444",
+                                            "&:hover": {
+                                              backgroundColor: "#7f1d1d",
+                                            },
+                                            "&:disabled": {
+                                              color: "#6b7280",
+                                            },
+                                          }}
+                                        >
+                                          {isCancelling ? (
+                                            <CircularProgress
+                                              size={16}
+                                              sx={{ color: "#ef4444" }}
+                                            />
+                                          ) : (
+                                            <Close fontSize="small" />
+                                          )}
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                  </TableCell>
                                 </TableRow>
                               );
                             })
                           ) : (
                             <TableRow>
                               <TableCell
-                                colSpan={3}
+                                colSpan={4}
                                 sx={{
                                   textAlign: "center",
                                   color: "text.secondary",
@@ -430,6 +554,15 @@ export default function TradingPage() {
                             >
                               Total
                             </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "text.secondary",
+                                fontWeight: "bold",
+                                width: "60px",
+                              }}
+                            >
+                              Action
+                            </TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -443,6 +576,10 @@ export default function TradingPage() {
                                 parseFloat(amountFormatted) *
                                 parseFloat(priceFormatted)
                               ).toFixed(6);
+                              const isOwner = isUserOrder(order);
+                              const isCancelling =
+                                pendingAction === "cancel" &&
+                                cancellingOrderId === order.id;
 
                               return (
                                 <TableRow
@@ -462,13 +599,48 @@ export default function TradingPage() {
                                   <TableCell sx={{ color: "text.secondary" }}>
                                     {total}
                                   </TableCell>
+                                  <TableCell>
+                                    {isOwner && (
+                                      <Tooltip title="Cancel order">
+                                        <IconButton
+                                          size="small"
+                                          onClick={() =>
+                                            handleCancelOrder(order.id)
+                                          }
+                                          disabled={
+                                            isPending ||
+                                            isConfirming ||
+                                            isCancelling
+                                          }
+                                          sx={{
+                                            color: "#10b981",
+                                            "&:hover": {
+                                              backgroundColor: "#064e3b",
+                                            },
+                                            "&:disabled": {
+                                              color: "#6b7280",
+                                            },
+                                          }}
+                                        >
+                                          {isCancelling ? (
+                                            <CircularProgress
+                                              size={16}
+                                              sx={{ color: "#10b981" }}
+                                            />
+                                          ) : (
+                                            <Close fontSize="small" />
+                                          )}
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                  </TableCell>
                                 </TableRow>
                               );
                             })
                           ) : (
                             <TableRow>
                               <TableCell
-                                colSpan={3}
+                                colSpan={4}
                                 sx={{
                                   textAlign: "center",
                                   color: "text.secondary",
@@ -642,7 +814,9 @@ export default function TradingPage() {
                       Balance:
                     </Typography>
                     <Typography variant="body2" color="text.primary">
-                      {balance ? formatTokenAmount(balance as bigint) : "0.00"}{" "}
+                      {getCurrentBalance()
+                        ? formatTokenAmount(getCurrentBalance())
+                        : "0.00"}{" "}
                       {tradeType === OrderType.SELL
                         ? pairInfo.baseName
                         : pairInfo.quoteName}
@@ -650,13 +824,31 @@ export default function TradingPage() {
                   </Box>
                 </Box>
 
+                {/* Insufficient Balance Warning */}
+                {isConnected && hasInsufficientBalance() && (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    Insufficient balance. You need{" "}
+                    {tradeType === OrderType.SELL ? amount : calculateTotal()}{" "}
+                    {tradeType === OrderType.SELL
+                      ? pairInfo.baseName
+                      : pairInfo.quoteName}{" "}
+                    but only have {formatTokenAmount(getCurrentBalance())}.
+                  </Alert>
+                )}
+
                 {isConnected ? (
                   <Button
                     fullWidth
                     variant="contained"
                     size="large"
                     onClick={handlePlaceOrder}
-                    disabled={isPending || isConfirming || !amount || !price}
+                    disabled={
+                      isPending ||
+                      isConfirming ||
+                      !amount ||
+                      !price ||
+                      hasInsufficientBalance()
+                    }
                     sx={{
                       backgroundColor:
                         tradeType === OrderType.BUY ? "#10b981" : "#ef4444",
@@ -681,6 +873,8 @@ export default function TradingPage() {
                               : pairInfo.quoteName
                           }...`
                         : "Placing Order..."
+                      : hasInsufficientBalance()
+                      ? "Insufficient Balance"
                       : needsApproval()
                       ? `Approve ${
                           tradeType === OrderType.SELL

@@ -42,12 +42,6 @@ export default function TokenMarket() {
   return (
     <Box sx={commonStyles.pageContainerStyles}>
       <Container maxWidth="lg">
-        {/* Tab Navigation */}
-        <RoundedTabs value={tabValue} onChange={handleTabChange} centered>
-          <Tab label="Trade Tokens" />
-          <Tab label="My Orders" />
-        </RoundedTabs>
-
         {/* Main Content Card */}
         <Card sx={commonStyles.cardStyles}>
           <CardContent sx={{ p: 3 }}>

@@ -66,6 +66,7 @@ export function useDex(baseToken?: string, quoteToken?: string) {
         : undefined,
     query: {
       enabled: !!baseToken && !!quoteToken,
+      refetchInterval: 3000, // Refetch every 3 seconds
     },
   });
 
@@ -271,17 +272,32 @@ export function useDex(baseToken?: string, quoteToken?: string) {
     });
 
   /**
-   * Get token balance
+   * Get base token balance
    */
-  const { data: balanceData, refetch: refetchBalance } = useReadContract({
-    address: baseToken as `0x${string}`,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address && !!baseToken,
-    },
-  });
+  const { data: baseBalanceData, refetch: refetchBaseBalance } =
+    useReadContract({
+      address: baseToken as `0x${string}`,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: address ? [address] : undefined,
+      query: {
+        enabled: !!address && !!baseToken,
+      },
+    });
+
+  /**
+   * Get quote token balance
+   */
+  const { data: quoteBalanceData, refetch: refetchQuoteBalance } =
+    useReadContract({
+      address: quoteToken as `0x${string}`,
+      abi: ERC20_ABI,
+      functionName: "balanceOf",
+      args: address ? [address] : undefined,
+      query: {
+        enabled: !!address && !!quoteToken,
+      },
+    });
 
   // Refetch order list when transaction is confirmed
   useEffect(() => {
@@ -289,14 +305,16 @@ export function useDex(baseToken?: string, quoteToken?: string) {
       refetchOrderList();
       refetchBaseAllowance();
       refetchQuoteAllowance();
-      refetchBalance();
+      refetchBaseBalance();
+      refetchQuoteBalance();
     }
   }, [
     isConfirmed,
     refetchOrderList,
     refetchBaseAllowance,
     refetchQuoteAllowance,
-    refetchBalance,
+    refetchBaseBalance,
+    refetchQuoteBalance,
   ]);
 
   return {
@@ -319,13 +337,15 @@ export function useDex(baseToken?: string, quoteToken?: string) {
     // Token data
     baseAllowance: baseAllowanceData,
     quoteAllowance: quoteAllowanceData,
-    balance: balanceData,
+    baseBalance: baseBalanceData,
+    quoteBalance: quoteBalanceData,
 
     // Refetch functions
     refetchOrderList,
     refetchBaseAllowance,
     refetchQuoteAllowance,
-    refetchBalance,
+    refetchBaseBalance,
+    refetchQuoteBalance,
   };
 }
 
