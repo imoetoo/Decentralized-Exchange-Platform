@@ -7,8 +7,8 @@ export default buildModule("MockStablecoinsModule", (m) => {
     { name: "Mock DAI",          symbol: "DAI"  },
     { name: "Mock Binance USD",  symbol: "BUSD" },
     { name: "Mock TrueUSD",      symbol: "TUSD" },
-    { name: "Mock Pax Dollar",   symbol: "USDP" },
-    { name: "Mock First Digital USD", symbol: "FDUSD" },
+    { name: "Mock Wrapped Bitcoin",   symbol: "WBTC" },
+    { name: "Mock Wrapped Ether", symbol: "WETH" },
   ];
 
   const deployed = {};

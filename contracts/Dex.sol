@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 contract Dex is ReentrancyGuard {
     using SafeERC20 for IERC20;
     uint256 private constant PRICE_PRECISION = 1e6; // Price precision (e.g., 1 USDC = 1,000,000 microUSDC)
+    uint256 public constant MAX_BATCH_LENGTH = 7;
 
     // 0 for BUY, 1 for SELL
     enum actionType { BUY, SELL }
@@ -46,6 +47,8 @@ contract Dex is ReentrancyGuard {
     event OrderCancelled(uint256 indexed orderId);
     event OrderClosed(uint256 indexed orderId);
     // event OrderExpired(uint256 indexed orderId);
+    event BatchLegFilled(uint256 orderId, uint256 nextOrderId, uint256 baseSold, uint256 quoteReceived);
+    event BatchExecuted(uint256[] orderIds, uint256 amountInFirst);
 
     constructor(address _feeAccount, uint256 _feePercent) {
         feeAccount = _feeAccount;
@@ -288,5 +291,140 @@ contract Dex is ReentrancyGuard {
         }
         net = gross - fee;
         IERC20(quoteToken).safeTransfer(to, net);
+    }
+
+    function executeBatch(uint256[] calldata orderIds, uint256 amountInFirst) external nonReentrant {
+        uint256 n = orderIds.length;
+        require(n >= 2, "batch: too short");
+        require(n <= MAX_BATCH_LENGTH, "batch: too long");
+        require(amountInFirst > 0, "batch: amountInFirst=0");
+
+        _checkNoDuplicates(orderIds);
+        _validateOrders(orderIds);
+
+        (uint256[] memory prices, uint256[] memory remains) = _getPricesAndRemains(orderIds);
+
+        uint256 bottleneck = _computeBottleneck(prices, remains);
+        uint256 matchedAmountInFirst = amountInFirst < bottleneck ? amountInFirst : bottleneck;
+        require(matchedAmountInFirst > 0, "batch: no liquidity");
+
+        (uint256[] memory inAmounts, uint256[] memory outAmounts) =
+            _computeLegAmounts(matchedAmountInFirst, prices);
+
+        _executeSwaps(orderIds, inAmounts, outAmounts);
+
+        emit BatchExecuted(orderIds, matchedAmountInFirst);
+    }
+
+    // Helper for batch execution
+
+    function _checkNoDuplicates(uint256[] calldata orderIds) internal pure {
+        uint256 n = orderIds.length;
+        for (uint256 i = 0; i < n; ) {
+            for (uint256 j = i + 1; j < n; ) {
+                require(orderIds[i] != orderIds[j], "batch: duplicate orderId");
+                unchecked { ++j; }
+            }
+            unchecked { ++i; }
+        }
+    }
+
+    function _validateOrders(uint256[] calldata orderIds) internal view {
+        uint256 n = orderIds.length;
+        for (uint256 i = 0; i < n; ) {
+            uint256 id = orderIds[i];
+            Order storage oi = orders[id];
+            require(oi.active, "batch: inactive order");
+            require(oi.base != address(0) && oi.quote != address(0), "batch: token=0");
+            require(oi.price > 0, "batch: price=0");
+            // Only SELL orders supported in batch
+            require(oi.action == actionType.SELL, "batch: only SELL supported");
+
+            // Check circular path
+            uint256 nextId = orderIds[(i + 1) % n];
+            address nextBase = orders[nextId].base;
+            require(oi.quote == nextBase, "batch: token path not circular");
+
+            unchecked { ++i; }
+        }
+    }
+
+    function _getPricesAndRemains(uint256[] calldata orderIds) internal view returns (uint256[] memory prices, uint256[] memory remains) {
+        uint256 n = orderIds.length;
+        prices  = new uint256[](n);
+        remains = new uint256[](n);
+
+        for (uint256 i = 0; i < n; ) {
+            Order storage oi = orders[orderIds[i]];
+            uint256 remain = oi.amount - oi.filled;
+            require(remain > 0, "batch: no remain");
+            prices[i]  = oi.price;
+            remains[i] = remain;
+            unchecked { ++i; }
+        }
+    }
+
+    function _computeBottleneck(uint256[] memory prices, uint256[] memory remains) internal pure returns (uint256 bottleneck) {
+        uint256 n = prices.length;
+        bottleneck = type(uint256).max;
+
+        // num = PREC^i, den = p0*p1*...*p_{i-1}
+        uint256 accumNum = 1;
+        uint256 accumDen = 1;
+
+        for (uint256 i = 0; i < n; ) {
+            // limit_i = remain_i * PREC^i / (p0*p1*...*p_{i-1})
+            uint256 limit = (remains[i] * accumNum) / accumDen;
+            if (limit < bottleneck) bottleneck = limit;
+
+            accumNum = accumNum * PRICE_PRECISION;
+            accumDen = accumDen * prices[i];
+            unchecked { ++i; }
+        }
+    }
+
+    function _computeLegAmounts(uint256 matchedAmountInFirst,uint256[] memory prices) internal pure returns (uint256[] memory inAmounts, uint256[] memory outAmounts) {
+        uint256 n = prices.length;
+        inAmounts  = new uint256[](n);
+        outAmounts = new uint256[](n);
+
+        uint256 curIn = matchedAmountInFirst;
+        for (uint256 i = 0; i < n; ) {
+            inAmounts[i]  = curIn;
+            uint256 outQ  = (curIn * prices[i]) / PRICE_PRECISION; // SELL: base -> quote
+            outAmounts[i] = outQ;
+            curIn = outQ;
+            unchecked { ++i; }
+        }
+    }
+
+    function _executeSwaps(uint256[] calldata orderIds, uint256[] memory inAmounts, uint256[] memory outAmounts) internal {
+        uint256 n = orderIds.length;
+
+        for (uint256 i = 0; i < n; ) {
+            uint256 id = orderIds[i];
+            Order storage oi = orders[id];
+
+            // Get previous order's trader as the receiver
+            uint256 prev = (i + n - 1) % n;
+            address receiver = orders[orderIds[prev]].trader;
+
+            // Send the locked base to the previous order's trader
+            IERC20(oi.base).safeTransfer(receiver, inAmounts[i]);
+
+            // Update filled amount
+            oi.filled += inAmounts[i];
+            require(oi.filled <= oi.amount, "batch: overfill");
+            emit BatchLegFilled(id, orderIds[(i + 1) % n], inAmounts[i], outAmounts[i]);
+
+            // If order is fully filled, mark it as inactive
+            if (oi.filled == oi.amount) {
+                oi.active = false;
+                _removeFromBook(oi);
+                emit OrderClosed(id);
+            }
+
+            unchecked { ++i; }
+        }
     }
 }
