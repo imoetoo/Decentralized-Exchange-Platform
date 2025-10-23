@@ -32,10 +32,10 @@ import {
   USDT_ADDRESS,
   USDC_ADDRESS,
   DAI_ADDRESS,
-  BUSD_ADDRESS,
-  TUSD_ADDRESS,
-  USDP_ADDRESS,
-  FDUSD_ADDRESS,
+  EIGEN_ADDRESS,
+  PEPE_ADDRESS,
+  WBTC_ADDRESS,
+  WETH_ADDRESS,
 } from "@/constants";
 
 // Token address to symbol mapping
@@ -43,10 +43,10 @@ const TOKEN_SYMBOLS: { [key: string]: string } = {
   [USDT_ADDRESS.toLowerCase()]: "USDT",
   [USDC_ADDRESS.toLowerCase()]: "USDC",
   [DAI_ADDRESS.toLowerCase()]: "DAI",
-  [BUSD_ADDRESS.toLowerCase()]: "BUSD",
-  [TUSD_ADDRESS.toLowerCase()]: "TUSD",
-  [USDP_ADDRESS.toLowerCase()]: "USDP",
-  [FDUSD_ADDRESS.toLowerCase()]: "FDUSD",
+  [EIGEN_ADDRESS.toLowerCase()]: "EIGEN",
+  [PEPE_ADDRESS.toLowerCase()]: "PEPE",
+  [WBTC_ADDRESS.toLowerCase()]: "WBTC",
+  [WETH_ADDRESS.toLowerCase()]: "WETH",
 };
 
 const getTokenSymbol = (address: string): string => {

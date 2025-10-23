@@ -30,7 +30,7 @@ function getAddresses() {
   }
 
   // Collect all coint address
-  const PREFIX = "MockStablecoinsModule#Mock";
+  const PREFIX = "TokensModule#Mock";
   for (const [k, v] of Object.entries(json)) {
     if (k.startsWith(PREFIX)) {
       const symbol = k.slice(PREFIX.length); // e.g. "USDT"

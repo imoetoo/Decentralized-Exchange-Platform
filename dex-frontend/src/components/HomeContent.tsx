@@ -11,7 +11,7 @@ import {
   CardContent,
   Box,
 } from "@mui/material";
-import { SwapHoriz, Speed, Security } from "@mui/icons-material";
+import { SwapHoriz, Speed, Security, ViewList } from "@mui/icons-material";
 
 // Import styles
 import * as homeContentStyles from "@/styles/homeContentStyles";
@@ -39,14 +39,14 @@ export default function HomeContent() {
           <Typography variant="h1" sx={homeContentStyles.heroTitleStyles}>
             Decentralized Exchange
             <br />
-            For Stablecoin Trading
+            For Multi-Asset Trading
           </Typography>
 
           {/* Subtitle */}
           <Typography variant="h5" sx={homeContentStyles.heroSubtitleStyles}>
-            Trade USDT and USDC with an on-chain order book. Place limit orders,
-            discover the best prices, and trade peer-to-peer with zero
-            intermediaries.
+            Trade wrapped assets, stablecoins, and tokens with an on-chain order
+            book. Place limit orders, discover the best prices, and trade
+            peer-to-peer with zero intermediaries.
           </Typography>
 
           {/* Connection Status */}
@@ -127,7 +127,7 @@ export default function HomeContent() {
                 variant="h3"
                 sx={homeContentStyles.statsValueStyles.purple}
               >
-                2
+                7
               </Typography>
               <Typography sx={homeContentStyles.statsLabelStyles}>
                 Trading Pairs
@@ -202,7 +202,8 @@ export default function HomeContent() {
                   }}
                 >
                   Trade with a fully decentralized order book. All orders are
-                  stored on-chain for complete transparency and trustlessness.
+                  stored on-chain for complete transparency and trustlessness
+                  across multiple asset types.
                 </Typography>
                 <Link href="/market">
                   <Button
@@ -210,51 +211,6 @@ export default function HomeContent() {
                     sx={homeContentStyles.featureButtonStyles.blue}
                   >
                     View Order Books
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            {/* Limit Orders */}
-            <Card
-              sx={{
-                ...homeContentStyles.featureCardStyles,
-                ...homeContentStyles.featureCardHoverStyles.green,
-              }}
-            >
-              <CardContent sx={homeContentStyles.cardContentStyles}>
-                <div
-                  className={
-                    homeContentStyles.classNames.featureIconContainer.green
-                  }
-                >
-                  <Speed sx={{ color: "white" }} fontSize="large" />
-                </div>
-                <Typography
-                  variant="h5"
-                  sx={{
-                    ...homeContentStyles.cardTitleStyles,
-                    ...commonStyles.commonSpacing.smallMargin,
-                  }}
-                >
-                  Limit Orders
-                </Typography>
-                <Typography
-                  sx={{
-                    ...homeContentStyles.cardDescriptionStyles,
-                    ...commonStyles.commonSpacing.mediumMargin,
-                  }}
-                >
-                  Place limit orders at your desired price. Orders are
-                  automatically matched when conditions are met, giving you full
-                  control.
-                </Typography>
-                <Link href="/market">
-                  <Button
-                    variant="outlined"
-                    sx={homeContentStyles.featureButtonStyles.green}
-                  >
-                    Start Trading
                   </Button>
                 </Link>
               </CardContent>
@@ -291,7 +247,8 @@ export default function HomeContent() {
                   }}
                 >
                   Trade directly from your wallet with no intermediaries. Your
-                  funds stay in your control until orders are executed.
+                  funds stay in your control until orders are executed. We
+                  ensure maximum security and transparency for transactions.
                 </Typography>
                 <Link href="/market">
                   <Button
@@ -300,6 +257,52 @@ export default function HomeContent() {
                     disabled={!isConnected}
                   >
                     {isConnected ? "Trade Now" : "Connect Wallet"}
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* My Orders Management */}
+            <Card
+              sx={{
+                ...homeContentStyles.featureCardStyles,
+                ...homeContentStyles.featureCardHoverStyles.green,
+              }}
+            >
+              <CardContent sx={homeContentStyles.cardContentStyles}>
+                <div
+                  className={
+                    homeContentStyles.classNames.featureIconContainer.green
+                  }
+                >
+                  <ViewList sx={{ color: "white" }} fontSize="large" />
+                </div>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    ...homeContentStyles.cardTitleStyles,
+                    ...commonStyles.commonSpacing.smallMargin,
+                  }}
+                >
+                  My Orders Dashboard
+                </Typography>
+                <Typography
+                  sx={{
+                    ...homeContentStyles.cardDescriptionStyles,
+                    ...commonStyles.commonSpacing.mediumMargin,
+                  }}
+                >
+                  View all your open orders, buy/sell orders, and trade history
+                  in one place. Cancel any order anytime with full control over
+                  your trading activity.
+                </Typography>
+                <Link href="/orders">
+                  <Button
+                    variant="outlined"
+                    sx={homeContentStyles.featureButtonStyles.green}
+                    disabled={!isConnected}
+                  >
+                    {isConnected ? "View My Orders" : "Connect Wallet"}
                   </Button>
                 </Link>
               </CardContent>
@@ -369,8 +372,9 @@ export default function HomeContent() {
               <Typography
                 sx={homeContentStyles.howItWorksStepDescriptionStyles}
               >
-                Choose your trading pair, set your desired price, and place
-                limit orders to buy or sell USDT/USDC.
+                Choose your trading pair from wrapped assets (WETH, WBTC),
+                stablecoins (USDT, USDC, DAI), or other tokens (EIGEN, PEPE),
+                set your price, and place limit orders.
               </Typography>
             </div>
 

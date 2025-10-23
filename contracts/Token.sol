@@ -4,10 +4,10 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /**
- * Mock ERC20 tokens for testing the TokenMinting contract
- * Deploy two instances: one for USDT and one for USDC
+ * Mock ERC20 token for testing the DEX contract
+ * Can deploy multiple instances for different tokens (USDT, USDC, DAI, WETH, WBTC, etc.)
  */
-contract MockStablecoin is ERC20 {
+contract Token is ERC20 {
     uint8 private _decimals;
     
     constructor(

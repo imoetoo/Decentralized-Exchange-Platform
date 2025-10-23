@@ -9,8 +9,8 @@ async function main() {
 
   // log the addresses and balances of USDT, USDC
   
-  const usdt = await ethers.getContractAt("MockStablecoin", MockUSDT);
-  const usdc = await ethers.getContractAt("MockStablecoin", MockUSDC);
+  const usdt = await ethers.getContractAt("Token", MockUSDT);
+  const usdc = await ethers.getContractAt("Token", MockUSDC);
   const dex  = await ethers.getContractAt("Dex", Dex);
   const dexAddr = dex.target ?? dex.address;
   

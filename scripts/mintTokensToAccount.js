@@ -7,11 +7,11 @@ async function main() {
   const [deployer, alice, bob, carol] = await ethers.getSigners();
 
   // Only deployed token
-  const symbols = ["USDT", "USDC", "DAI", "BUSD", "TUSD", "WBTC", "WETH"]
+  const symbols = ["USDT", "USDC", "DAI", "PEPE", "WBTC", "WETH", "EIGEN"]
     .filter((s) => `Mock${s}` in addresses);
 
   if (symbols.length === 0) {
-    throw new Error("No mock tokens found in addresses()");
+    throw new Error("No tokens found in addresses()");
   }
 
   console.log("Using addresses:", addresses);
@@ -26,7 +26,7 @@ async function main() {
 
   for (const sym of symbols) {
     const addr = addresses[`Mock${sym}`];
-    const token = await ethers.getContractAt("MockStablecoin", addr);
+    const token = await ethers.getContractAt("Token", addr);
 
     // Three test people
     await (await token.mint(alice.address, mintPerAccount)).wait();

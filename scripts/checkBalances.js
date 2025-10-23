@@ -3,7 +3,7 @@ const { ethers } = hre;
 const getAddresses = require("./addresses");
 
 async function main() {
-  console.log("Checking token balances for all deployed mock coins...\n");
+  console.log("Checking token balances for all deployed mock tokens...\n");
 
   // Get deployed contract addresses
   const addressesMap = getAddresses();

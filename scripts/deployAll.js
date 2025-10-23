@@ -4,7 +4,7 @@ Make sure local hardhat node is running before executing this script.
 This file automates the full deployment process:
 1. Cleans old artifacts, cache, and deployment files.
 2. Compiles the smart contracts.
-3. Deploys Mock Stablecoins using Hardhat Ignition.
+3. Deploys Mock Tokens using Hardhat Ignition.
 4. Deploys the DEX contract using Hardhat Ignition.
 5. Copies deployment addresses to the frontend directory.
 
@@ -70,11 +70,11 @@ async function main() {
     process.exit(1);
   }
 
-  // Step 3: Deploy Mock Stablecoins
+  // Step 3: Deploy Mock Tokens
   if (
     !runCommand(
-      "npx hardhat ignition deploy ./ignition/modules/MockStablecoins.js --network localhost",
-      "💰 Deploying Mock Stablecoins"
+      "npx hardhat ignition deploy ./ignition/modules/Token.js --network localhost",
+      "💰 Deploying Mock Tokens"
     )
   ) {
     process.exit(1);

@@ -5,27 +5,25 @@ export const DEX_CONTRACT_ADDRESS = deployments[
   "DexModule#Dex"
 ] as `0x${string}`;
 
-// Mock stablecoin addresses from deployment (for localhost testing)
+// Mock token addresses from deployment (for localhost testing)
 export const USDT_ADDRESS = deployments[
-  "MockStablecoinsModule#MockUSDT"
+  "TokensModule#MockUSDT"
 ] as `0x${string}`;
 export const USDC_ADDRESS = deployments[
-  "MockStablecoinsModule#MockUSDC"
+  "TokensModule#MockUSDC"
 ] as `0x${string}`;
-export const DAI_ADDRESS = deployments[
-  "MockStablecoinsModule#MockDAI"
-] as `0x${string}`;
+export const DAI_ADDRESS = deployments["TokensModule#MockDAI"] as `0x${string}`;
 export const EIGEN_ADDRESS = deployments[
-  "MockStablecoinsModule#MockEIGEN"
+  "TokensModule#MockEIGEN"
 ] as `0x${string}`;
 export const PEPE_ADDRESS = deployments[
-  "MockStablecoinsModule#MockPEPE"
+  "TokensModule#MockPEPE"
 ] as `0x${string}`;
 export const WBTC_ADDRESS = deployments[
-  "MockStablecoinsModule#MockWBTC"
+  "TokensModule#MockWBTC"
 ] as `0x${string}`;
 export const WETH_ADDRESS = deployments[
-  "MockStablecoinsModule#MockWETH"
+  "TokensModule#MockWETH"
 ] as `0x${string}`;
 
 // Token decimals

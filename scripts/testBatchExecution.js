@@ -15,9 +15,9 @@ async function main() {
   const [deployer, alice, bob, carol] = await ethers.getSigners();
 
   const dex  = await ethers.getContractAt("Dex", Dex);
-  const usdt = await ethers.getContractAt("MockStablecoin", MockUSDT);
-  const usdc = await ethers.getContractAt("MockStablecoin", MockUSDC);
-  const dai  = await ethers.getContractAt("MockStablecoin", MockDAI);
+  const usdt = await ethers.getContractAt("Token", MockUSDT);
+  const usdc = await ethers.getContractAt("Token", MockUSDC);
+  const dai  = await ethers.getContractAt("Token", MockDAI);
 
   const dexAddr = dex.target ?? dex.address;
 

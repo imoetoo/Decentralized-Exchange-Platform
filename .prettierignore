@@ -1,0 +1,4 @@
+# Ignore specific script files to preserve original formatting
+scripts/mintTokensToAccount.js
+scripts/seedOrders.js
+scripts/testBatchExecution.js

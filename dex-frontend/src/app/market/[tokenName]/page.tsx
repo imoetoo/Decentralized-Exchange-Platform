@@ -31,7 +31,17 @@ import { useRouter, useParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import * as commonStyles from "@/styles/commonStyles";
 import { useDex, formatPrice, formatTokenAmount } from "@/hooks/useDex";
-import { OrderType, OrderKind, USDT_ADDRESS, USDC_ADDRESS } from "@/constants";
+import {
+  OrderType,
+  OrderKind,
+  USDT_ADDRESS,
+  USDC_ADDRESS,
+  WETH_ADDRESS,
+  WBTC_ADDRESS,
+  EIGEN_ADDRESS,
+  PEPE_ADDRESS,
+  DAI_ADDRESS,
+} from "@/constants";
 
 // Token pair data
 const tokenPairs: {
@@ -53,6 +63,36 @@ const tokenPairs: {
     quote: USDT_ADDRESS,
     baseName: "USDC",
     quoteName: "USDT",
+  },
+  "weth-usdc": {
+    base: WETH_ADDRESS,
+    quote: USDC_ADDRESS,
+    baseName: "WETH",
+    quoteName: "USDC",
+  },
+  "wbtc-usdt": {
+    base: WBTC_ADDRESS,
+    quote: USDT_ADDRESS,
+    baseName: "WBTC",
+    quoteName: "USDT",
+  },
+  "eigen-usdc": {
+    base: EIGEN_ADDRESS,
+    quote: USDC_ADDRESS,
+    baseName: "EIGEN",
+    quoteName: "USDC",
+  },
+  "pepe-usdt": {
+    base: PEPE_ADDRESS,
+    quote: USDT_ADDRESS,
+    baseName: "PEPE",
+    quoteName: "USDT",
+  },
+  "dai-usdc": {
+    base: DAI_ADDRESS,
+    quote: USDC_ADDRESS,
+    baseName: "DAI",
+    quoteName: "USDC",
   },
 };
 
