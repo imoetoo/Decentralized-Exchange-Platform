@@ -5,10 +5,10 @@ export default buildModule("MockStablecoinsModule", (m) => {
     { name: "Mock Tether USD",   symbol: "USDT" },
     { name: "Mock USD Coin",     symbol: "USDC" },
     { name: "Mock DAI",          symbol: "DAI"  },
-    { name: "Mock Binance USD",  symbol: "BUSD" },
-    { name: "Mock TrueUSD",      symbol: "TUSD" },
-    { name: "Mock Wrapped Bitcoin",   symbol: "WBTC" },
-    { name: "Mock Wrapped Ether", symbol: "WETH" },
+    { name: "Mock PEPE",  symbol: "PEPE" },
+    { name: "Mock Wrapped Bitcoin",      symbol: "WBTC" },
+    { name: "Mock Wrapped Ethereum",   symbol: "WETH" },
+    { name: "Mock EIGEN", symbol: "EIGEN" },
   ];
 
   const deployed = {};
@@ -21,5 +21,5 @@ export default buildModule("MockStablecoinsModule", (m) => {
     );
   }
 
-  return deployed; // { USDT, USDC, DAI, BUSD, TUSD, USDP, FDUSD, ... }
+  return deployed; // { USDT, USDC, DAI, PEPE, WBTC, WETH, EIGEN, ... }
 });

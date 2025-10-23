@@ -15,17 +15,17 @@ export const USDC_ADDRESS = deployments[
 export const DAI_ADDRESS = deployments[
   "MockStablecoinsModule#MockDAI"
 ] as `0x${string}`;
-export const BUSD_ADDRESS = deployments[
-  "MockStablecoinsModule#MockBUSD"
+export const EIGEN_ADDRESS = deployments[
+  "MockStablecoinsModule#MockEIGEN"
 ] as `0x${string}`;
-export const TUSD_ADDRESS = deployments[
-  "MockStablecoinsModule#MockTUSD"
+export const PEPE_ADDRESS = deployments[
+  "MockStablecoinsModule#MockPEPE"
 ] as `0x${string}`;
-export const USDP_ADDRESS = deployments[
-  "MockStablecoinsModule#MockUSDP"
+export const WBTC_ADDRESS = deployments[
+  "MockStablecoinsModule#MockWBTC"
 ] as `0x${string}`;
-export const FDUSD_ADDRESS = deployments[
-  "MockStablecoinsModule#MockFDUSD"
+export const WETH_ADDRESS = deployments[
+  "MockStablecoinsModule#MockWETH"
 ] as `0x${string}`;
 
 // Token decimals
