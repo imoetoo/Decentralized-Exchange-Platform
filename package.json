@@ -14,6 +14,7 @@
     "deploy:copy": "hardhat run --network localhost scripts/copyDeployments.js",
     "mint": "hardhat run --network localhost scripts/mintTokensToAccount.js",
     "seed": "hardhat run --network localhost scripts/seedOrders.js",
+    "seedOrder": "hardhat run --network localhost scripts/seedOrderBook.js",
     "balance": "hardhat run --network localhost scripts/checkBalances.js",
     "order": "hardhat run --network localhost scripts/checkOrders.js",
     "test": "hardhat test",
