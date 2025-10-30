@@ -1,12 +1,16 @@
 "use client";
 import { Card, CardContent, Typography, Box, Avatar } from "@mui/material";
-import { SwapHoriz } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 
 interface TokenListingCardProps {
   title: string;
   provider: string;
 }
+
+// Helper function to get token image path
+const getTokenImage = (tokenSymbol: string): string => {
+  return `/tokenImages/${tokenSymbol.toLowerCase()}.png`;
+};
 
 export default function TokenListingCard({
   title,
@@ -24,6 +28,9 @@ export default function TokenListingCard({
       .replace(/[^a-z0-9-]/g, "");
     router.push(`/market/${pairName}`);
   };
+
+  // Extract base and quote tokens from title (e.g., "USDC/USDT" -> ["USDC", "USDT"])
+  const [baseToken, quoteToken] = title.split("/");
 
   return (
     <Card
@@ -50,15 +57,41 @@ export default function TokenListingCard({
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Avatar
+          {/* Token Pair Icon - Split design for all pairs */}
+          <Box
             sx={{
-              bgcolor: "#14b8a6", // Teal color for all trading pairs
+              position: "relative",
               width: 48,
               height: 48,
+              display: "flex",
+              alignItems: "center",
             }}
           >
-            <SwapHoriz />
-          </Avatar>
+            {/* Base token (left) */}
+            <Avatar
+              src={getTokenImage(baseToken)}
+              sx={{
+                width: 36,
+                height: 36,
+                border: "2px solid #111827",
+                position: "absolute",
+                left: 0,
+                zIndex: 2,
+              }}
+            />
+            {/* Quote token (right, overlapping) */}
+            <Avatar
+              src={getTokenImage(quoteToken)}
+              sx={{
+                width: 36,
+                height: 36,
+                border: "2px solid #111827",
+                position: "absolute",
+                left: 18,
+                zIndex: 1,
+              }}
+            />
+          </Box>
           <Box>
             <Typography
               variant="h6"

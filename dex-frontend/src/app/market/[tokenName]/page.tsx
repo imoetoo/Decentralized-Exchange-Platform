@@ -50,50 +50,98 @@ const tokenPairs: {
     quote: string;
     baseName: string;
     quoteName: string;
+    swappablePair?: string; // For pairs that can be swapped (like USDC/USDT <-> USDT/USDC)
   };
 } = {
-  "usdt-usdc": {
-    base: USDT_ADDRESS,
-    quote: USDC_ADDRESS,
-    baseName: "USDT",
-    quoteName: "USDC",
-  },
   "usdc-usdt": {
     base: USDC_ADDRESS,
     quote: USDT_ADDRESS,
     baseName: "USDC",
     quoteName: "USDT",
+    swappablePair: "usdt-usdc",
+  },
+  "usdt-usdc": {
+    base: USDT_ADDRESS,
+    quote: USDC_ADDRESS,
+    baseName: "USDT",
+    quoteName: "USDC",
+    swappablePair: "usdc-usdt",
   },
   "weth-usdc": {
     base: WETH_ADDRESS,
     quote: USDC_ADDRESS,
     baseName: "WETH",
     quoteName: "USDC",
+    swappablePair: "usdc-weth",
+  },
+  "usdc-weth": {
+    base: USDC_ADDRESS,
+    quote: WETH_ADDRESS,
+    baseName: "USDC",
+    quoteName: "WETH",
+    swappablePair: "weth-usdc",
   },
   "wbtc-usdt": {
     base: WBTC_ADDRESS,
     quote: USDT_ADDRESS,
     baseName: "WBTC",
     quoteName: "USDT",
+    swappablePair: "usdt-wbtc",
+  },
+  "usdt-wbtc": {
+    base: USDT_ADDRESS,
+    quote: WBTC_ADDRESS,
+    baseName: "USDT",
+    quoteName: "WBTC",
+    swappablePair: "wbtc-usdt",
   },
   "eigen-usdc": {
     base: EIGEN_ADDRESS,
     quote: USDC_ADDRESS,
     baseName: "EIGEN",
     quoteName: "USDC",
+    swappablePair: "usdc-eigen",
+  },
+  "usdc-eigen": {
+    base: USDC_ADDRESS,
+    quote: EIGEN_ADDRESS,
+    baseName: "USDC",
+    quoteName: "EIGEN",
+    swappablePair: "eigen-usdc",
   },
   "pepe-usdt": {
     base: PEPE_ADDRESS,
     quote: USDT_ADDRESS,
     baseName: "PEPE",
     quoteName: "USDT",
+    swappablePair: "usdt-pepe",
+  },
+  "usdt-pepe": {
+    base: USDT_ADDRESS,
+    quote: PEPE_ADDRESS,
+    baseName: "USDT",
+    quoteName: "PEPE",
+    swappablePair: "pepe-usdt",
   },
   "dai-usdc": {
     base: DAI_ADDRESS,
     quote: USDC_ADDRESS,
     baseName: "DAI",
     quoteName: "USDC",
+    swappablePair: "usdc-dai",
   },
+  "usdc-dai": {
+    base: USDC_ADDRESS,
+    quote: DAI_ADDRESS,
+    baseName: "USDC",
+    quoteName: "DAI",
+    swappablePair: "dai-usdc",
+  },
+};
+
+// Helper function to get token image path
+const getTokenImage = (tokenSymbol: string): string => {
+  return `/tokenImages/${tokenSymbol.toLowerCase()}.png`;
 };
 
 export default function TradingPage() {
@@ -197,6 +245,15 @@ export default function TradingPage() {
 
   const handleBackClick = () => {
     router.push("/market");
+  };
+
+  const handleSwapPair = () => {
+    if (pairInfo?.swappablePair) {
+      // Reset form when swapping pairs
+      setAmount("");
+      setPrice("");
+      router.push(`/market/${pairInfo.swappablePair}`);
+    }
   };
 
   const handleTradeTypeChange = (type: OrderType) => {
@@ -335,15 +392,41 @@ export default function TradingPage() {
         <Card sx={{ ...commonStyles.cardStyles, mb: 3 }}>
           <CardContent sx={{ p: 3 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
-              <Avatar
+              {/* Token Pair Icon - Split design for all pairs */}
+              <Box
                 sx={{
-                  bgcolor: "#14b8a6",
+                  position: "relative",
                   width: 64,
                   height: 64,
+                  display: "flex",
+                  alignItems: "center",
                 }}
               >
-                <SwapHoriz fontSize="large" />
-              </Avatar>
+                {/* First token (left) - Base token */}
+                <Avatar
+                  src={getTokenImage(pairInfo.baseName)}
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    border: "3px solid #111827",
+                    position: "absolute",
+                    left: 0,
+                    zIndex: 2,
+                  }}
+                />
+                {/* Second token (right, overlapping) - Quote token */}
+                <Avatar
+                  src={getTokenImage(pairInfo.quoteName)}
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    border: "3px solid #111827",
+                    position: "absolute",
+                    left: 24,
+                    zIndex: 1,
+                  }}
+                />
+              </Box>
               <Box sx={{ flex: 1 }}>
                 <Typography
                   variant="h4"
@@ -355,6 +438,32 @@ export default function TradingPage() {
                   Trade {pairInfo.baseName} against {pairInfo.quoteName}
                 </Typography>
               </Box>
+              {/* Swap Button - Only show for swappable pairs */}
+              {pairInfo?.swappablePair && (
+                <Tooltip
+                  title={`Switch to ${pairInfo.quoteName}/${pairInfo.baseName}`}
+                >
+                  <IconButton
+                    onClick={handleSwapPair}
+                    sx={{
+                      backgroundColor: "#1f2937",
+                      border: "2px solid #14b8a6",
+                      color: "#14b8a6",
+                      width: 48,
+                      height: 48,
+                      "&:hover": {
+                        backgroundColor: "#14b8a6",
+                        color: "#111827",
+                        transform: "rotate(180deg)",
+                        transition: "all 0.3s ease",
+                      },
+                      transition: "all 0.3s ease",
+                    }}
+                  >
+                    <SwapHoriz />
+                  </IconButton>
+                </Tooltip>
+              )}
             </Box>
           </CardContent>
         </Card>
