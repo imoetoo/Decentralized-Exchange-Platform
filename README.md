@@ -359,6 +359,120 @@ npm run mint
 npm run seed
 ```
 
+## Seeding the Order Book (seedOrderBook.js)
+
+To populate the order book with realistic trading data for testing and development:
+
+```bash
+# In your terminal under the root folder (SC4053-Project)
+npm run seedOrder
+```
+
+This script will:
+
+- Create buy and sell orders for multiple trading pairs (WBTC/USDT, USDT/WBTC, WETH/USDC, etc.)
+- Generate orders with varying prices and amounts to simulate a real order book
+- Automatically approve tokens and place limit orders using test accounts
+- Display the order book state after seeding
+
+**Note:** Make sure the local blockchain is running (`npm run node`) and contracts are deployed before running this script.
+
+---
+
+# 3. New Features
+
+## 3.1 Portfolio Page
+
+The portfolio page provides a comprehensive view of your token holdings with real-time pricing:
+
+**Features:**
+
+- **Total Assets Display**: Shows the total value of all your tokens in USD at the top of the page
+- **Token Balance List**: Displays all tokens in your wallet with their balances
+- **Real-Time USD Valuation**: Each token shows its USD value based on the highest bid price from the order book
+- **Token Icons**: Visual representation of each token with custom images
+- **Automatic Price Updates**: Prices are fetched from the DEX order book every 10 seconds
+- **Multi-Pair Support**: Supports pricing from both direct (TOKEN/USDC, TOKEN/USDT) and inverse (USDC/TOKEN, USDT/TOKEN) trading pairs
+
+**How to Access:**
+
+1. Connect your wallet to the DEX frontend
+2. Navigate to the "Portfolio" page from the header menu
+3. View your token balances and total asset value in USD
+
+**Price Calculation:**
+
+- Prices are determined by the highest buy order (best bid) in the order book
+- For tokens with inverse pairs (e.g., USDT/WBTC), the price is automatically inverted
+- USDC and USDT are treated as $1.00 stablecoins
+
+## 3.2 Trading Pair Swap
+
+Quickly switch between trading perspectives for any token pair:
+
+**Features:**
+
+- **One-Click Swap**: Click the swap icon in the market header to instantly reverse the trading pair
+- **Automatic Redirection**: Swaps between TOKEN1/TOKEN2 ↔ TOKEN2/TOKEN1
+- **Maintains Context**: Keeps you on the same tokens, just switches base and quote
+- **Order Book Inversion**: The order book updates to show the opposite perspective
+
+**Example Use Cases:**
+
+- View WBTC/USDT to see how much USDT you need to buy WBTC
+- Swap to USDT/WBTC to see how much WBTC you can get for your USDT
+- Compare liquidity and prices from both perspectives
+
+**How to Use:**
+
+1. Navigate to any trading pair (e.g., WBTC/USDT)
+2. Click the swap icon (↔) in the market header
+3. The page will reload with the inverse pair (USDT/WBTC)
+
+## 3.3 Order Book Seeding Script
+
+The `seedOrderBook.js` script automates the creation of realistic market data for development and testing:
+
+**Features:**
+
+- **Multiple Trading Pairs**: Seeds orders for WBTC, WETH, DAI, PEPE, and EIGEN against USDT/USDC
+- **Realistic Price Ranges**: Creates orders with market-appropriate pricing
+- **Both Sides of the Book**: Generates buy and sell orders for each pair
+- **Token Approval Handling**: Automatically approves tokens before placing orders
+- **Progress Reporting**: Shows which orders are being placed and their status
+
+**How to Run:**
+
+```bash
+npm run seedOrder
+```
+
+**What it Does:**
+
+1. Connects to the local blockchain network
+2. Retrieves deployed contract addresses
+3. Mints tokens to test accounts if needed
+4. Approves DEX contract to spend tokens
+5. Places limit orders across multiple trading pairs
+6. Reports success/failure for each order
+
+**Trading Pairs Created:**
+
+- WBTC/USDT
+- USDT/WBTC
+- WETH/USDC
+- DAI/USDC
+- PEPE/USDT
+- EIGEN/USDC
+
+**Configuration:**
+The script can be customized by editing `/scripts/seedOrderBook.js`:
+
+- Adjust price ranges for each token
+- Modify order amounts
+- Add or remove trading pairs
+- Change the number of orders per pair
+
 ## TODOs (DDL: End of Week 12)
 
 ##### Week 9 and Week 10
