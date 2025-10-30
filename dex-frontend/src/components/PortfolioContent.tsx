@@ -211,13 +211,12 @@ export default function PortfolioContent() {
                             }}
                           >
                             <Avatar
+                              src={`/tokenImages/${token.symbol.toLowerCase()}.png`}
+                              alt={token.symbol}
                               sx={{
                                 width: 40,
                                 height: 40,
-                                background:
-                                  "linear-gradient(to bottom right, #3b82f6, #7c3aed)",
-                                fontSize: "0.875rem",
-                                fontWeight: "bold",
+                                background: "#1f2937",
                               }}
                             >
                               {token.symbol.substring(0, 2)}
