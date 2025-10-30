@@ -2,6 +2,7 @@
 
 import { useAccount } from "wagmi";
 import { useTokenBalances } from "@/hooks/useTokenBalances";
+import { useTokenPrices } from "@/hooks/useTokenPrices";
 import {
   Box,
   Container,
@@ -20,10 +21,34 @@ import {
 } from "@mui/material";
 import { AccountBalanceWallet, MonetizationOn } from "@mui/icons-material";
 import * as commonStyles from "@/styles/commonStyles";
+import { useMemo } from "react";
 
 export default function PortfolioContent() {
   const { address, isConnected } = useAccount();
   const { balances, isLoading, error } = useTokenBalances();
+
+  // Get token prices
+  const tokensForPricing = useMemo(
+    () => balances.map((b) => ({ address: b.address, symbol: b.symbol })),
+    [balances]
+  );
+  const { prices, isLoading: isLoadingPrices } =
+    useTokenPrices(tokensForPricing);
+
+  // Calculate total assets in USD
+  const totalAssetsUSD = useMemo(() => {
+    const total = balances.reduce((total, token) => {
+      const price = prices[token.address.toLowerCase()] || 0;
+      const balance = parseFloat(token.balance);
+      const value = balance * price;
+      console.log(
+        `${token.symbol}: balance=${balance}, price=${price}, value=${value}`
+      );
+      return total + value;
+    }, 0);
+    console.log(`Total assets: ${total}`);
+    return total;
+  }, [balances, prices]);
 
   if (!isConnected) {
     return (
@@ -89,6 +114,54 @@ export default function PortfolioContent() {
             </Typography>
           )}
         </Box>
+
+        {/* Total Assets Card */}
+        {!isLoading && !error && balances.length > 0 && (
+          <Card
+            sx={{
+              ...commonStyles.cardStyles,
+              mb: 3,
+            }}
+          >
+            <CardContent sx={{ p: 4 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  fontWeight: "500",
+                  mb: 1,
+                  fontSize: "0.95rem",
+                }}
+              >
+                Total assets
+              </Typography>
+              <Box sx={{ display: "flex", alignItems: "baseline", gap: 0.5 }}>
+                <Typography
+                  variant="h2"
+                  sx={{
+                    color: "text.primary",
+                    fontWeight: "bold",
+                    fontSize: "3.5rem",
+                  }}
+                >
+                  $
+                  {totalAssetsUSD.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </Typography>
+              </Box>
+              {isLoadingPrices && (
+                <Typography
+                  variant="caption"
+                  sx={{ color: "text.secondary", mt: 1 }}
+                >
+                  Updating prices...
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Loading State */}
         {isLoading && (
@@ -252,18 +325,40 @@ export default function PortfolioContent() {
                             py: 2.5,
                           }}
                         >
-                          <Typography
-                            variant="body1"
-                            sx={{
-                              fontWeight: "600",
-                              color: "text.primary",
-                            }}
-                          >
-                            {parseFloat(token.balance).toLocaleString("en-US", {
-                              maximumFractionDigits: 2,
-                              minimumFractionDigits: 2,
-                            })}
-                          </Typography>
+                          <Box>
+                            <Typography
+                              variant="body1"
+                              sx={{
+                                fontWeight: "600",
+                                color: "text.primary",
+                                mb: 0.25,
+                              }}
+                            >
+                              {parseFloat(token.balance).toLocaleString(
+                                "en-US",
+                                {
+                                  maximumFractionDigits: 2,
+                                  minimumFractionDigits: 2,
+                                }
+                              )}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: "text.secondary",
+                                fontSize: "0.75rem",
+                              }}
+                            >
+                              ≈ $
+                              {(
+                                parseFloat(token.balance) *
+                                (prices[token.address.toLowerCase()] || 0)
+                              ).toLocaleString("en-US", {
+                                maximumFractionDigits: 2,
+                                minimumFractionDigits: 2,
+                              })}
+                            </Typography>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))}
