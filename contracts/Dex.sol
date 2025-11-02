@@ -49,6 +49,7 @@ contract Dex is ReentrancyGuard {
     // event OrderExpired(uint256 indexed orderId);
     event BatchLegFilled(uint256 orderId, uint256 nextOrderId, uint256 baseSold, uint256 quoteReceived);
     event BatchExecuted(uint256[] orderIds, uint256 amountInFirst);
+    event OrderFilled(0, orderId, qty, quoteAmount);
 
     constructor(address _feeAccount, uint256 _feePercent) {
         feeAccount = _feeAccount;
@@ -426,5 +427,33 @@ contract Dex is ReentrancyGuard {
 
             unchecked { ++i; }
         }
+    }
+
+    function takeOrder(uint256 orderId, uint256 baseAmount) external nonReentrant {
+        Order storage o = orders[orderId];
+        require(o.active, "order inactive");
+        uint256 remain = o.amount - o.filled;
+        require(remain > 0, "order filled");
+        uint256 qty = (baseAmount == 0) ? remain : baseAmount;
+        require(qty <= remain, "exceed remain");
+        uint256 quoteAmount = (qty * o.price) / PRICE_PRECISION;
+
+        if (o.action == actionType.SELL) {
+            IERC20(o.quote).safeTransferFrom(msg.sender, address(this), quoteAmount);
+            _payoutQuoteWithFee(o.quote, o.trader, quoteAmount);
+            IERC20(o.base).safeTransfer(msg.sender, qty);
+        } else {
+            IERC20(o.base).safeTransferFrom(msg.sender, address(this), qty);
+            IERC20(o.base).safeTransfer(o.trader, qty);
+            _payoutQuoteWithFee(o.quote, msg.sender, quoteAmount);
+        }
+
+        o.filled += qty;
+        if (o.filled == o.amount) {
+            o.active = false;
+            _removeFromBook(o);
+            emit OrderClosed(orderId);
+        }
+        emit OrderFilled(0, orderId, qty, quoteAmount);
     }
 }
