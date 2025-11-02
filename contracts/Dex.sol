@@ -28,33 +28,56 @@ contract Dex is ReentrancyGuard {
         bool active;           
     }
 
+    struct StopLimitOrder {
+        uint256 id;
+        address trader;
+        actionType action;
+        address base;
+        address quote;
+        uint256 amount;
+        uint256 stopPrice;
+        uint256 limitPrice;
+        uint256 ts;
+        bool active;
+        bool triggered;
+    }
+
     struct OrderBook {
         uint256[] buyOrders;
         uint256[] sellOrders;
+    }
+    struct StopBook {
+        uint256[] buyStops; 
+        uint256[] sellStops;  
     }
 
     // State variables
     mapping(uint256 => Order) public orders;
     mapping(bytes32 => OrderBook) private books;
+    mapping(uint256 => StopLimitOrder) public stopOrders;
+    mapping(bytes32 => StopBook) private stopBooks;
 
+    uint256 public nextStopOrderId;
     uint256 public nextOrderId;
     uint256 public feePercent;
     address public feeAccount; // Account that receives fees
 
     // Events
     event NewOrder(uint256 id, address trader, actionType action, address base, address quote, uint256 amount, uint256 price);
+    event StopLimitPlaced(uint256 indexed id, address indexed trader, actionType action, address base, address quote, uint256 amount, uint256 stopPrice, uint256 limitPrice);
+    event StopLimitTriggered(uint256 indexed id, uint256 newOrderId);
     event OrderFilled(uint256 takerId, uint256 makerId, uint256 baseAmount, uint256 quoteAmount);
     event OrderCancelled(uint256 indexed orderId);
     event OrderClosed(uint256 indexed orderId);
-    // event OrderExpired(uint256 indexed orderId);
+    event StopLimitCancelled(uint256 indexed id);
     event BatchLegFilled(uint256 orderId, uint256 nextOrderId, uint256 baseSold, uint256 quoteReceived);
     event BatchExecuted(uint256[] orderIds, uint256 amountInFirst);
-    event OrderFilled(0, orderId, qty, quoteAmount);
 
     constructor(address _feeAccount, uint256 _feePercent) {
         feeAccount = _feeAccount;
         feePercent = _feePercent;
         nextOrderId = 1;
+        nextStopOrderId = 1;
     }
 
     // Key generation for order pairs
@@ -114,6 +137,52 @@ contract Dex is ReentrancyGuard {
                 _insertSell(book.sellOrders, orderId);
             }
         }
+    }
+
+    // Stop-limit order: Funds are locked when placing the order
+    function placeStopLimit(
+        actionType action,
+        address base,
+        address quote,
+        uint256 amount,
+        uint256 stopPrice,
+        uint256 limitPrice
+    ) external nonReentrant returns (uint256 stopId) {
+        require(base != address(0) && quote != address(0), "Invalid token address");
+        require(base != quote, "Base and quote must differ");
+        require(amount > 0 && stopPrice > 0 && limitPrice > 0, "Invalid params");
+
+        if (action == actionType.SELL) {
+            IERC20(base).safeTransferFrom(msg.sender, address(this), amount);
+        } else {
+            uint256 needQuote = (amount * limitPrice) / PRICE_PRECISION;
+            IERC20(quote).safeTransferFrom(msg.sender, address(this), needQuote);
+        }
+
+        stopId = nextStopOrderId++;
+        stopOrders[stopId] = StopLimitOrder({
+            id: stopId,
+            trader: msg.sender,
+            action: action,
+            base: base,
+            quote: quote,
+            amount: amount,
+            stopPrice: stopPrice,
+            limitPrice: limitPrice,
+            ts: block.timestamp,
+            active: true,
+            triggered: false
+        });
+
+        bytes32 key = _pairKey(base, quote);
+        StopBook storage sbook = stopBooks[key];
+        if (action == actionType.BUY) {
+            sbook.buyStops.push(stopId);
+        } else {
+            sbook.sellStops.push(stopId);
+        }
+
+        emit StopLimitPlaced(stopId, msg.sender, action, base, quote, amount, stopPrice, limitPrice);
     }
 
     // Find the correct place to insert the new buy order to keep the array sorted
@@ -222,6 +291,7 @@ contract Dex is ReentrancyGuard {
             maker.filled += tradedBase;
 
             emit OrderFilled(taker.id, maker.id, tradedBase, tradedQuote);
+            _checkAndTriggerStops(taker.base, taker.quote, maker.price);
 
             // Check if maker is fully filled
             // SELL order does not put quote token in the contract so no refund needed (BUY order: put money; SELL order: put merchandise)
@@ -279,6 +349,36 @@ contract Dex is ReentrancyGuard {
 
         emit OrderCancelled(orderId);
         emit OrderClosed(orderId);
+    }
+
+    function cancelStop(uint256 stopId) external nonReentrant {
+        StopLimitOrder storage so = stopOrders[stopId];
+        require(so.active, "stop inactive");
+        require(!so.triggered, "already triggered");
+        require(so.trader == msg.sender, "not stop owner");
+
+        bytes32 key = _pairKey(so.base, so.quote);
+        StopBook storage sbook = stopBooks[key];
+        
+        bool found = false;
+        uint256[] storage arr = (so.action == actionType.BUY) ? sbook.buyStops : sbook.sellStops;
+        for (uint256 i = 0; i < arr.length; i++) {
+            if (arr[i] == stopId) {
+                _orderedRemove(arr, i);
+                found = true;
+                break;
+            }
+        }
+        require(found, "stop not found in book");
+
+        if (so.action == actionType.SELL) {
+            IERC20(so.base).safeTransfer(so.trader, so.amount);
+        } else {
+            uint256 needQuote = (so.amount * so.limitPrice) / PRICE_PRECISION;
+            IERC20(so.quote).safeTransfer(so.trader, needQuote);
+        }
+        so.active = false;
+        emit StopLimitCancelled(stopId);
     }
 
     function _payoutQuoteWithFee(address quoteToken, address to, uint256 gross) internal returns (uint256 net) {
@@ -417,6 +517,7 @@ contract Dex is ReentrancyGuard {
             oi.filled += inAmounts[i];
             require(oi.filled <= oi.amount, "batch: overfill");
             emit BatchLegFilled(id, orderIds[(i + 1) % n], inAmounts[i], outAmounts[i]);
+            _checkAndTriggerStops(oi.base, oi.quote, oi.price);
 
             // If order is fully filled, mark it as inactive
             if (oi.filled == oi.amount) {
@@ -426,6 +527,94 @@ contract Dex is ReentrancyGuard {
             }
 
             unchecked { ++i; }
+        }
+    }
+
+    function _checkAndTriggerStops(
+        address base,
+        address quote,
+        uint256 tradePrice
+    ) internal {
+        bytes32 key = _pairKey(base, quote);
+        StopBook storage sb = stopBooks[key];
+
+        // Buy-stop: tradePrice >= stopPrice
+        uint256 i = sb.buyStops.length;
+        while (i > 0) {
+            i--;
+            uint256 stopId = sb.buyStops[i];
+            StopLimitOrder storage so = stopOrders[stopId];
+            if (so.active && !so.triggered && tradePrice >= so.stopPrice) {
+                _triggerStopOrder(key, i, true, so);
+            }
+        }
+
+        // Sell-stop: tradePrice <= stopPrice
+        i = sb.sellStops.length;
+        while (i > 0) {
+            i--;
+            uint256 stopId = sb.sellStops[i];
+            StopLimitOrder storage so = stopOrders[stopId];
+            if (so.active && !so.triggered && tradePrice <= so.stopPrice) {
+                _triggerStopOrder(key, i, false, so);
+            }
+        }
+    }
+
+    function _triggerStopOrder(
+        bytes32 key,
+        uint256 indexInArray,
+        bool fromBuyArray,               
+        StopLimitOrder storage so
+    ) internal {
+        // Remove from stop book array
+        if (fromBuyArray) {
+            uint256 last = stopBooks[key].buyStops.length - 1;
+            stopBooks[key].buyStops[indexInArray] = stopBooks[key].buyStops[last];
+            stopBooks[key].buyStops.pop();
+        } else {
+            uint256 last = stopBooks[key].sellStops.length - 1;
+            stopBooks[key].sellStops[indexInArray] = stopBooks[key].sellStops[last];
+            stopBooks[key].sellStops.pop();
+        }
+
+        so.active = false;
+        so.triggered = true;
+
+        uint256 newOrderId = nextOrderId++;
+        orders[newOrderId] = Order({
+            id: newOrderId,
+            trader: so.trader,
+            action: so.action,
+            base: so.base,
+            quote: so.quote,
+            amount: so.amount,
+            filled: 0,
+            price: so.limitPrice, 
+            ts: block.timestamp,
+            active: true
+        });
+
+        emit NewOrder(
+            newOrderId,
+            so.trader,
+            so.action,
+            so.base,
+            so.quote,
+            so.amount,
+            so.limitPrice
+        );
+
+        emit StopLimitTriggered(so.id, newOrderId);
+        _matchOnPlace(newOrderId);
+        Order storage newOrd = orders[newOrderId];
+        if (newOrd.active) {
+            OrderBook storage book = books[key];
+            if (newOrd.action == actionType.BUY) {
+                _insertBuy(book.buyOrders, newOrderId);
+            } else {
+                _insertSell(book.sellOrders, newOrderId);
+            }
         }
     }
 
@@ -455,5 +644,6 @@ contract Dex is ReentrancyGuard {
             emit OrderClosed(orderId);
         }
         emit OrderFilled(0, orderId, qty, quoteAmount);
+        _checkAndTriggerStops(o.base, o.quote, o.price);
     }
 }

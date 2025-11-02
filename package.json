@@ -17,6 +17,8 @@
     "seedOrder": "hardhat run --network localhost scripts/seedOrderBook.js",
     "balance": "hardhat run --network localhost scripts/checkBalances.js",
     "checkOrder": "hardhat run --network localhost scripts/checkOrders.js",
+    "batchexecute": "hardhat run --network localhost scripts/testBatchExecution.js",
+    "stoplimit": "hardhat run --network localhost scripts/testStopLimit.js",
     "test": "hardhat test",
     "get:addresses": "hardhat run --network localhost scripts/addresses.js"
   },
