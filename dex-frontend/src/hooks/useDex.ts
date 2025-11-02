@@ -175,6 +175,61 @@ export function useDex(baseToken?: string, quoteToken?: string) {
     fetchOrders();
   }, [orderListData, baseToken, quoteToken, publicClient]);
 
+  // Get order details by ID
+  const getOrderById = useCallback(
+    async (orderId: bigint): Promise<Order | null> => {
+      if (!publicClient) return null;
+      try {
+        const orderData = (await publicClient.readContract({
+          address: DEX_CONTRACT_ADDRESS,
+          abi: DEX_ABI,
+          functionName: "orders",
+          args: [orderId],
+        })) as any;
+
+        const order: Order = {
+          id: orderData[0],
+          trader: orderData[1],
+          action: orderData[2],
+          base: orderData[3],
+          quote: orderData[4],
+          amount: orderData[5],
+          filled: orderData[6],
+          price: orderData[7],
+          ts: orderData[8],
+          active: orderData[9],
+        };
+
+        return order.active ? order : null;
+      } catch (err) {
+        console.error("getOrderById error", err);
+        return null;
+      }
+    },
+    [publicClient]
+  );
+
+  // Get order IDs for a given trading pair
+  const getOrderIdsForPair = useCallback(
+    async (base: string, quote: string): Promise<{ buy: bigint[]; sell: bigint[] }> => {
+      if (!publicClient) return { buy: [], sell: [] };
+      try {
+        const data = (await publicClient.readContract({
+          address: DEX_CONTRACT_ADDRESS,
+          abi: DEX_ABI,
+          functionName: "getList",
+          args: [base as `0x${string}`, quote as `0x${string}`],
+        })) as [bigint[], bigint[]];
+
+        return { buy: data[0], sell: data[1] };
+      } catch (err) {
+        console.error("getOrderIdsForPair error", err);
+        return { buy: [], sell: [] };
+      }
+    },
+    [publicClient]
+  );
+
   /**
    * Place a limit order
    * @param action - BUY or SELL
@@ -219,6 +274,23 @@ export function useDex(baseToken?: string, quoteToken?: string) {
         abi: DEX_ABI,
         functionName: "cancel",
         args: [orderId],
+      });
+    },
+    [writeContract]
+  );
+
+  const executeBatch = useCallback(
+    async (orderIds: bigint[], amountInFirst: string) => {
+      if (!orderIds.length) {
+        throw new Error("orderIds cannot be empty");
+      }
+      const amountWei = parseUnits(amountInFirst, STABLECOIN_DECIMALS);
+
+      writeContract({
+        address: DEX_CONTRACT_ADDRESS,
+        abi: DEX_ABI,
+        functionName: "executeBatch",
+        args: [orderIds, amountWei],
       });
     },
     [writeContract]
@@ -326,6 +398,9 @@ export function useDex(baseToken?: string, quoteToken?: string) {
     placeLimitOrder,
     cancelOrder,
     approveToken,
+    getOrderById,
+    getOrderIdsForPair,
+    executeBatch,
 
     // Transaction state
     isPending,

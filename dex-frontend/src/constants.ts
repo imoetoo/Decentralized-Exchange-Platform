@@ -98,6 +98,16 @@ export const DEX_ABI = [
     type: "function",
   },
   {
+    inputs: [
+      { internalType: "uint256[]", name: "orderIds", type: "uint256[]" },
+      { internalType: "uint256", name: "amountInFirst", type: "uint256" },
+    ],
+    name: "executeBatch",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
     anonymous: false,
     inputs: [
       { indexed: false, internalType: "uint256", name: "id", type: "uint256" },

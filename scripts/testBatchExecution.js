@@ -34,8 +34,7 @@ async function main() {
   // Alice: SELL DAI  -> USDT
   await (await dai.connect(alice).approve(dexAddr, ethers.MaxUint256)).wait();
 
-  // --- 下单参数 ---
-  // 价格精度为 1e6（与合约 PRICE_PRECISION 一致）
+  // Precision 6 decimals for all stablecoins
   const p = (x) => ethers.parseUnits(x, 6);     // price helper
   const u6 = (x) => ethers.parseUnits(x, 6);    // amount helper
 
@@ -128,7 +127,7 @@ async function main() {
   console.log("Orderbook USDC/DAI SELL ids:", sell2.map(x => x.toString()));
   console.log("Orderbook DAI/USDT SELL ids:", sell3.map(x => x.toString()));
 
-  console.log("\n✅ Batch execution test completed.");
+  console.log("\n Batch execution test completed.");
 }
 
 main().catch((e) => (console.error(e), process.exit(1)));
