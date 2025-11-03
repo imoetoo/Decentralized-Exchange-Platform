@@ -364,9 +364,26 @@ export default function TradingPage() {
       } else if (orderKind === OrderKind.STOP_LIMIT) {
         await placeStopLimit(tradeType, amount, stopPrice, limitPrice);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error placing order:", err);
       setPendingAction(null);
+      setShowAlert(true);
+
+      // Check if user rejected the transaction
+      if (
+        err?.message?.includes("User rejected") ||
+        err?.message?.includes("user rejected") ||
+        err?.code === 4001 ||
+        err?.code === "ACTION_REJECTED"
+      ) {
+        alert("Transaction cancelled. Please try again when ready.");
+      } else {
+        alert(
+          `Transaction failed: ${
+            err?.message || "Unknown error"
+          }. Please try again.`
+        );
+      }
     }
   };
 
@@ -381,10 +398,27 @@ export default function TradingPage() {
       setPendingAction("cancel");
       setCancellingOrderId(orderId);
       await cancelOrder(orderId);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error cancelling order:", err);
       setPendingAction(null);
       setCancellingOrderId(null);
+      setShowAlert(true);
+
+      // Check if user rejected the transaction
+      if (
+        err?.message?.includes("User rejected") ||
+        err?.message?.includes("user rejected") ||
+        err?.code === 4001 ||
+        err?.code === "ACTION_REJECTED"
+      ) {
+        alert("Cancellation cancelled. No changes were made.");
+      } else {
+        alert(
+          `Failed to cancel order: ${
+            err?.message || "Unknown error"
+          }. Please try again.`
+        );
+      }
     }
   };
 
@@ -667,7 +701,20 @@ export default function TradingPage() {
             severity={error ? "error" : isConfirmed ? "success" : "info"}
             sx={{ mb: 3 }}
           >
-            {error && `Error: ${error.message}`}
+            {error &&
+              (() => {
+                const errorMsg = error.message || String(error);
+                // Check if user rejected the transaction
+                if (
+                  errorMsg.includes("User rejected") ||
+                  errorMsg.includes("user rejected") ||
+                  errorMsg.includes("User denied")
+                ) {
+                  return "Transaction cancelled. Please try again when ready.";
+                }
+                // Show a friendly error message
+                return "Transaction failed. Please try again.";
+              })()}
             {isPending &&
               `Please confirm the ${
                 pendingAction === "approve"
