@@ -29,6 +29,20 @@ export interface Order {
   active: boolean;
 }
 
+export interface StopLimitOrder {
+  id: bigint;
+  trader: string;
+  action: OrderType;
+  base: string;
+  quote: string;
+  amount: bigint;
+  stopPrice: bigint;
+  limitPrice: bigint;
+  ts: bigint;
+  active: boolean;
+  triggered: boolean;
+}
+
 export interface OrderBookData {
   buyOrders: Order[];
   sellOrders: Order[];
@@ -211,7 +225,10 @@ export function useDex(baseToken?: string, quoteToken?: string) {
 
   // Get order IDs for a given trading pair
   const getOrderIdsForPair = useCallback(
-    async (base: string, quote: string): Promise<{ buy: bigint[]; sell: bigint[] }> => {
+    async (
+      base: string,
+      quote: string
+    ): Promise<{ buy: bigint[]; sell: bigint[] }> => {
       if (!publicClient) return { buy: [], sell: [] };
       try {
         const data = (await publicClient.readContract({
@@ -277,6 +294,162 @@ export function useDex(baseToken?: string, quoteToken?: string) {
       });
     },
     [writeContract]
+  );
+
+  /**
+   * Take (execute) an existing limit order immediately - Take Order
+   * @param orderId - The ID of the order to take
+   * @param baseAmount - Amount to take (0 means take all remaining)
+   */
+  const takeOrder = useCallback(
+    async (orderId: bigint, baseAmount: string) => {
+      const amountWei =
+        baseAmount === "0"
+          ? BigInt(0)
+          : parseUnits(baseAmount, STABLECOIN_DECIMALS);
+
+      writeContract({
+        address: DEX_CONTRACT_ADDRESS,
+        abi: DEX_ABI,
+        functionName: "takeOrder",
+        args: [orderId, amountWei],
+      });
+    },
+    [writeContract]
+  );
+
+  /**
+   * Execute a market order - automatically takes the best price from the order book
+   * @param action - BUY or SELL
+   * @param baseAmount - Amount to trade
+   */
+  const executeMarketOrder = useCallback(
+    async (action: OrderType, baseAmount: string) => {
+      if (!baseToken || !quoteToken) {
+        throw new Error("Missing token addresses");
+      }
+
+      // Get the best order from the order book
+      let bestOrder: Order | null = null;
+
+      if (action === OrderType.BUY) {
+        // For BUY, take the lowest priced SELL order
+        if (orderBook.sellOrders.length > 0) {
+          bestOrder = orderBook.sellOrders[0]; // Already sorted by price (ascending)
+        }
+      } else {
+        // For SELL, take the highest priced BUY order
+        if (orderBook.buyOrders.length > 0) {
+          bestOrder = orderBook.buyOrders[0]; // Already sorted by price (descending)
+        }
+      }
+
+      if (!bestOrder) {
+        throw new Error("No orders available in the order book");
+      }
+
+      // Execute takeOrder with the best order
+      const amountWei = parseUnits(baseAmount, STABLECOIN_DECIMALS);
+      writeContract({
+        address: DEX_CONTRACT_ADDRESS,
+        abi: DEX_ABI,
+        functionName: "takeOrder",
+        args: [bestOrder.id, amountWei],
+      });
+    },
+    [baseToken, quoteToken, orderBook, writeContract]
+  );
+
+  /**
+   * Place a stop-limit order
+   * @param action - BUY or SELL
+   * @param amount - Amount of base token
+   * @param stopPrice - Price at which the order is triggered
+   * @param limitPrice - Limit price after trigger
+   */
+  const placeStopLimit = useCallback(
+    async (
+      action: OrderType,
+      amount: string,
+      stopPrice: string,
+      limitPrice: string
+    ) => {
+      if (!baseToken || !quoteToken || !address) {
+        throw new Error("Missing required parameters");
+      }
+
+      const amountWei = parseUnits(amount, STABLECOIN_DECIMALS);
+      const stopPriceInPrecision = parseUnits(stopPrice, 6);
+      const limitPriceInPrecision = parseUnits(limitPrice, 6);
+
+      writeContract({
+        address: DEX_CONTRACT_ADDRESS,
+        abi: DEX_ABI,
+        functionName: "placeStopLimit",
+        args: [
+          action,
+          baseToken as `0x${string}`,
+          quoteToken as `0x${string}`,
+          amountWei,
+          stopPriceInPrecision,
+          limitPriceInPrecision,
+        ],
+      });
+    },
+    [baseToken, quoteToken, address, writeContract]
+  );
+
+  /**
+   * Cancel a stop-limit order
+   * @param stopId - The ID of the stop order to cancel
+   */
+  const cancelStopLimit = useCallback(
+    async (stopId: bigint) => {
+      writeContract({
+        address: DEX_CONTRACT_ADDRESS,
+        abi: DEX_ABI,
+        functionName: "cancelStop",
+        args: [stopId],
+      });
+    },
+    [writeContract]
+  );
+
+  /**
+   * Get stop order details by ID
+   */
+  const getStopOrderById = useCallback(
+    async (stopId: bigint): Promise<StopLimitOrder | null> => {
+      if (!publicClient) return null;
+      try {
+        const stopData = (await publicClient.readContract({
+          address: DEX_CONTRACT_ADDRESS,
+          abi: DEX_ABI,
+          functionName: "stopOrders",
+          args: [stopId],
+        })) as any;
+
+        const stopOrder: StopLimitOrder = {
+          id: stopData[0],
+          trader: stopData[1],
+          action: stopData[2],
+          base: stopData[3],
+          quote: stopData[4],
+          amount: stopData[5],
+          stopPrice: stopData[6],
+          limitPrice: stopData[7],
+          ts: stopData[8],
+          active: stopData[9],
+          triggered: stopData[10],
+        };
+
+        return stopOrder.active && !stopOrder.triggered ? stopOrder : null;
+      } catch (err) {
+        console.error("getStopOrderById error", err);
+        return null;
+      }
+    },
+    [publicClient]
   );
 
   const executeBatch = useCallback(
@@ -396,9 +569,14 @@ export function useDex(baseToken?: string, quoteToken?: string) {
 
     // Actions
     placeLimitOrder,
+    placeStopLimit,
+    takeOrder,
+    executeMarketOrder,
     cancelOrder,
+    cancelStopLimit,
     approveToken,
     getOrderById,
+    getStopOrderById,
     getOrderIdsForPair,
     executeBatch,
 

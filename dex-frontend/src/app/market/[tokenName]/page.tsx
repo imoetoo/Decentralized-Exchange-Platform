@@ -30,7 +30,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import * as commonStyles from "@/styles/commonStyles";
-import { useDex, formatPrice, formatTokenAmount } from "@/hooks/useDex";
+import { useDex, formatPrice, formatTokenAmount, Order } from "@/hooks/useDex";
 import {
   OrderType,
   OrderKind,
@@ -154,6 +154,9 @@ export default function TradingPage() {
   const [orderKind, setOrderKind] = useState<OrderKind>(OrderKind.LIMIT);
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");
+  const [stopPrice, setStopPrice] = useState("");
+  const [limitPrice, setLimitPrice] = useState("");
+  const [selectedOrderId, setSelectedOrderId] = useState<bigint | null>(null);
   const [pendingAction, setPendingAction] = useState<
     "approve" | "order" | "cancel" | null
   >(null);
@@ -170,6 +173,9 @@ export default function TradingPage() {
     orderBook,
     isLoadingOrders,
     placeLimitOrder,
+    placeStopLimit,
+    takeOrder,
+    executeMarketOrder,
     cancelOrder,
     approveToken,
     isPending,
@@ -191,6 +197,9 @@ export default function TradingPage() {
       const timer = setTimeout(() => {
         setAmount("");
         setPrice("");
+        setStopPrice("");
+        setLimitPrice("");
+        setSelectedOrderId(null);
         setPendingAction(null);
         setShowAlert(false); // Hide alert after 10 seconds
       }, 10000); // Show success message for 10 seconds
@@ -214,8 +223,17 @@ export default function TradingPage() {
           setPendingAction("order");
           if (orderKind === OrderKind.LIMIT) {
             await placeLimitOrder(tradeType, amount, price);
-          } else {
-            alert(`${orderKind} orders are not implemented yet. Coming soon!`);
+          } else if (orderKind === OrderKind.MARKET) {
+            await executeMarketOrder(tradeType, amount);
+          } else if (orderKind === OrderKind.TAKE_ORDER) {
+            if (!selectedOrderId) {
+              alert("Please select an order to take");
+              setPendingAction(null);
+              return;
+            }
+            await takeOrder(selectedOrderId, amount || "0");
+          } else if (orderKind === OrderKind.STOP_LIMIT) {
+            await placeStopLimit(tradeType, amount, stopPrice, limitPrice);
           }
         } catch (err) {
           console.error("Error placing order after approval:", err);
@@ -252,6 +270,9 @@ export default function TradingPage() {
       // Reset form when swapping pairs
       setAmount("");
       setPrice("");
+      setStopPrice("");
+      setLimitPrice("");
+      setSelectedOrderId(null);
       router.push(`/market/${pairInfo.swappablePair}`);
     }
   };
@@ -261,9 +282,42 @@ export default function TradingPage() {
   };
 
   const handlePlaceOrder = async () => {
-    if (!amount || !price) {
-      alert("Please enter both amount and price");
-      return;
+    // Validate inputs based on order kind
+    if (orderKind === OrderKind.LIMIT) {
+      if (!amount || !price) {
+        alert("Please enter both amount and price");
+        return;
+      }
+    } else if (orderKind === OrderKind.MARKET) {
+      if (!amount) {
+        alert("Please enter the amount you want to trade");
+        return;
+      }
+      // Check if there are orders available
+      const hasOrders =
+        tradeType === OrderType.BUY
+          ? orderBook.sellOrders.length > 0
+          : orderBook.buyOrders.length > 0;
+      if (!hasOrders) {
+        alert("No orders available in the order book");
+        return;
+      }
+    } else if (orderKind === OrderKind.TAKE_ORDER) {
+      if (!selectedOrderId) {
+        alert("Please click on an order in the order book to select it");
+        return;
+      }
+      if (!amount) {
+        alert(
+          "Please enter the amount you want to trade (or 0 for full amount)"
+        );
+        return;
+      }
+    } else if (orderKind === OrderKind.STOP_LIMIT) {
+      if (!amount || !stopPrice || !limitPrice) {
+        alert("Please enter amount, stop price, and limit price");
+        return;
+      }
     }
 
     if (!isConnected) {
@@ -281,10 +335,14 @@ export default function TradingPage() {
         // Approve the token that will be spent
         const tokenToApprove =
           tradeType === OrderType.SELL ? pairInfo.base : pairInfo.quote;
-        // For BUY orders, approve the total quote amount (amount * price)
+        // For BUY orders, approve the total quote amount
         // For SELL orders, approve the base amount
         const amountToApprove =
-          tradeType === OrderType.BUY ? calculateTotal() : amount;
+          tradeType === OrderType.BUY
+            ? orderKind === OrderKind.LIMIT
+              ? calculateTotal()
+              : calculateMarketTotal()
+            : amount;
         await approveToken(tokenToApprove, amountToApprove);
         // Don't place order yet - wait for approval to confirm
         // The approval confirmation will be handled by useEffect
@@ -293,11 +351,18 @@ export default function TradingPage() {
 
       // If approval is not needed or already done, place the order
       setPendingAction("order");
-      // For limit orders
       if (orderKind === OrderKind.LIMIT) {
         await placeLimitOrder(tradeType, amount, price);
-      } else {
-        alert(`${orderKind} orders are not implemented yet. Coming soon!`);
+      } else if (orderKind === OrderKind.MARKET) {
+        await executeMarketOrder(tradeType, amount);
+      } else if (orderKind === OrderKind.TAKE_ORDER) {
+        if (!selectedOrderId) {
+          alert("Please select an order to take");
+          return;
+        }
+        await takeOrder(selectedOrderId, amount || "0");
+      } else if (orderKind === OrderKind.STOP_LIMIT) {
+        await placeStopLimit(tradeType, amount, stopPrice, limitPrice);
       }
     } catch (err) {
       console.error("Error placing order:", err);
@@ -323,31 +388,132 @@ export default function TradingPage() {
     }
   };
 
-  const isUserOrder = (order: any) => {
+  const handleSelectOrder = (order: Order) => {
+    // Only allow selecting orders for take orders
+    if (orderKind !== OrderKind.TAKE_ORDER) return;
+
+    setSelectedOrderId(order.id);
+    // Auto-fill the price field with the selected order's price
+    setPrice(formatPrice(order.price));
+    // Optionally auto-fill amount with remaining amount
+    if (!amount) {
+      setAmount(formatTokenAmount(order.amount - order.filled));
+    }
+  };
+
+  const isUserOrder = (order: Order) => {
     return address && order.trader.toLowerCase() === address.toLowerCase();
   };
 
   const needsApproval = () => {
-    if (!amount || !price) return false;
+    if (orderKind === OrderKind.LIMIT) {
+      if (!amount || !price) return false;
+      // For SELL orders, check base token allowance against amount
+      if (tradeType === OrderType.SELL) {
+        if (!baseAllowance) return true;
+        const requiredAmount = BigInt(Math.floor(parseFloat(amount) * 1e6));
+        return BigInt(baseAllowance.toString()) < requiredAmount;
+      }
+      // For BUY orders, check quote token allowance against total (amount * price)
+      if (!quoteAllowance) return true;
+      const requiredAmount = BigInt(
+        Math.floor(parseFloat(calculateTotal()) * 1e6)
+      );
+      return BigInt(quoteAllowance.toString()) < requiredAmount;
+    } else if (orderKind === OrderKind.MARKET) {
+      if (!amount) return false;
+      // Get the best order to calculate required amount
+      const bestOrder =
+        tradeType === OrderType.BUY
+          ? orderBook.sellOrders[0]
+          : orderBook.buyOrders[0];
+      if (!bestOrder) return false;
 
-    // For SELL orders, check base token allowance against amount
-    if (tradeType === OrderType.SELL) {
-      if (!baseAllowance) return true;
-      const requiredAmount = BigInt(Math.floor(parseFloat(amount) * 1e6));
-      return BigInt(baseAllowance.toString()) < requiredAmount;
+      // For market BUY, we're taking a SELL order (need quote tokens)
+      // For market SELL, we're taking a BUY order (need base tokens)
+      if (tradeType === OrderType.BUY) {
+        if (!quoteAllowance) return true;
+        const requiredAmount = BigInt(
+          Math.floor(parseFloat(calculateMarketTotal()) * 1e6)
+        );
+        return BigInt(quoteAllowance.toString()) < requiredAmount;
+      } else {
+        if (!baseAllowance) return true;
+        const requiredAmount = BigInt(Math.floor(parseFloat(amount) * 1e6));
+        return BigInt(baseAllowance.toString()) < requiredAmount;
+      }
+    } else if (orderKind === OrderKind.TAKE_ORDER) {
+      if (!selectedOrderId || !amount) return false;
+      const selectedOrder =
+        tradeType === OrderType.BUY
+          ? orderBook.sellOrders.find((o) => o.id === selectedOrderId)
+          : orderBook.buyOrders.find((o) => o.id === selectedOrderId);
+      if (!selectedOrder) return false;
+
+      // For take order BUY, we're taking a SELL order (need quote tokens)
+      // For take order SELL, we're taking a BUY order (need base tokens)
+      if (tradeType === OrderType.BUY) {
+        if (!quoteAllowance) return true;
+        const requiredAmount = BigInt(
+          Math.floor(parseFloat(calculateMarketTotal()) * 1e6)
+        );
+        return BigInt(quoteAllowance.toString()) < requiredAmount;
+      } else {
+        if (!baseAllowance) return true;
+        const requiredAmount = BigInt(Math.floor(parseFloat(amount) * 1e6));
+        return BigInt(baseAllowance.toString()) < requiredAmount;
+      }
+    } else if (orderKind === OrderKind.STOP_LIMIT) {
+      if (!amount || !stopPrice || !limitPrice) return false;
+      // For SELL orders, check base token allowance
+      if (tradeType === OrderType.SELL) {
+        if (!baseAllowance) return true;
+        const requiredAmount = BigInt(Math.floor(parseFloat(amount) * 1e6));
+        return BigInt(baseAllowance.toString()) < requiredAmount;
+      }
+      // For BUY orders, check quote token allowance against limit price
+      if (!quoteAllowance) return true;
+      const requiredAmount = BigInt(
+        Math.floor(parseFloat(amount) * parseFloat(limitPrice) * 1e6)
+      );
+      return BigInt(quoteAllowance.toString()) < requiredAmount;
     }
-
-    // For BUY orders, check quote token allowance against total (amount * price)
-    if (!quoteAllowance) return true;
-    const requiredAmount = BigInt(
-      Math.floor(parseFloat(calculateTotal()) * 1e6)
-    );
-    return BigInt(quoteAllowance.toString()) < requiredAmount;
+    return false;
   };
 
   const calculateTotal = () => {
     if (!amount || !price) return "0.00";
     return (parseFloat(amount) * parseFloat(price)).toFixed(6);
+  };
+
+  const calculateMarketTotal = () => {
+    if (!amount) return "0.00";
+
+    let targetOrder: Order | null = null;
+
+    if (orderKind === OrderKind.MARKET) {
+      // For MARKET orders, use the best price from order book
+      targetOrder =
+        tradeType === OrderType.BUY
+          ? orderBook.sellOrders[0] || null // Lowest sell price
+          : orderBook.buyOrders[0] || null; // Highest buy price
+    } else if (orderKind === OrderKind.TAKE_ORDER && selectedOrderId) {
+      // For TAKE_ORDER, use the selected order
+      targetOrder =
+        tradeType === OrderType.BUY
+          ? orderBook.sellOrders.find((o) => o.id === selectedOrderId) || null
+          : orderBook.buyOrders.find((o) => o.id === selectedOrderId) || null;
+    }
+
+    if (!targetOrder) return "0.00";
+
+    const orderPrice = parseFloat(formatPrice(targetOrder.price));
+    const tradeAmount =
+      amount === "0"
+        ? parseFloat(formatTokenAmount(targetOrder.amount - targetOrder.filled))
+        : parseFloat(amount);
+
+    return (tradeAmount * orderPrice).toFixed(6);
   };
 
   const getCurrentBalance = () => {
@@ -359,21 +525,48 @@ export default function TradingPage() {
   };
 
   const hasInsufficientBalance = () => {
-    if (!amount || !price) return false;
-
     const currentBalance = getCurrentBalance();
 
-    if (tradeType === OrderType.SELL) {
-      // For SELL orders, check if we have enough base tokens
-      const requiredAmount = BigInt(Math.floor(parseFloat(amount) * 1e6));
-      return currentBalance < requiredAmount;
-    } else {
-      // For BUY orders, check if we have enough quote tokens (total cost)
-      const requiredAmount = BigInt(
-        Math.floor(parseFloat(calculateTotal()) * 1e6)
-      );
-      return currentBalance < requiredAmount;
+    if (orderKind === OrderKind.LIMIT) {
+      if (!amount || !price) return false;
+      if (tradeType === OrderType.SELL) {
+        // For SELL orders, check if we have enough base tokens
+        const requiredAmount = BigInt(Math.floor(parseFloat(amount) * 1e6));
+        return currentBalance < requiredAmount;
+      } else {
+        // For BUY orders, check if we have enough quote tokens (total cost)
+        const requiredAmount = BigInt(
+          Math.floor(parseFloat(calculateTotal()) * 1e6)
+        );
+        return currentBalance < requiredAmount;
+      }
+    } else if (
+      orderKind === OrderKind.MARKET ||
+      orderKind === OrderKind.TAKE_ORDER
+    ) {
+      if (!amount) return false;
+      if (tradeType === OrderType.SELL) {
+        const requiredAmount = BigInt(Math.floor(parseFloat(amount) * 1e6));
+        return currentBalance < requiredAmount;
+      } else {
+        const requiredAmount = BigInt(
+          Math.floor(parseFloat(calculateMarketTotal()) * 1e6)
+        );
+        return currentBalance < requiredAmount;
+      }
+    } else if (orderKind === OrderKind.STOP_LIMIT) {
+      if (!amount || !limitPrice) return false;
+      if (tradeType === OrderType.SELL) {
+        const requiredAmount = BigInt(Math.floor(parseFloat(amount) * 1e6));
+        return currentBalance < requiredAmount;
+      } else {
+        const requiredAmount = BigInt(
+          Math.floor(parseFloat(amount) * parseFloat(limitPrice) * 1e6)
+        );
+        return currentBalance < requiredAmount;
+      }
     }
+    return false;
   };
 
   return (
@@ -589,12 +782,32 @@ export default function TradingPage() {
                               const isCancelling =
                                 pendingAction === "cancel" &&
                                 cancellingOrderId === order.id;
+                              const isSelected = selectedOrderId === order.id;
+                              const isClickable =
+                                orderKind === OrderKind.TAKE_ORDER &&
+                                tradeType === OrderType.BUY;
 
                               return (
                                 <TableRow
                                   key={order.id.toString()}
+                                  onClick={() =>
+                                    isClickable && handleSelectOrder(order)
+                                  }
                                   sx={{
-                                    "&:hover": { backgroundColor: "#1f2937" },
+                                    "&:hover": {
+                                      backgroundColor: isClickable
+                                        ? "#2d3748"
+                                        : "#1f2937",
+                                      cursor: isClickable
+                                        ? "pointer"
+                                        : "default",
+                                    },
+                                    backgroundColor: isSelected
+                                      ? "#1e3a5f"
+                                      : "transparent",
+                                    border: isSelected
+                                      ? "2px solid #3b82f6"
+                                      : "none",
                                   }}
                                 >
                                   <TableCell
@@ -729,12 +942,32 @@ export default function TradingPage() {
                               const isCancelling =
                                 pendingAction === "cancel" &&
                                 cancellingOrderId === order.id;
+                              const isSelected = selectedOrderId === order.id;
+                              const isClickable =
+                                orderKind === OrderKind.TAKE_ORDER &&
+                                tradeType === OrderType.SELL;
 
                               return (
                                 <TableRow
                                   key={order.id.toString()}
+                                  onClick={() =>
+                                    isClickable && handleSelectOrder(order)
+                                  }
                                   sx={{
-                                    "&:hover": { backgroundColor: "#1f2937" },
+                                    "&:hover": {
+                                      backgroundColor: isClickable
+                                        ? "#2d3748"
+                                        : "#1f2937",
+                                      cursor: isClickable
+                                        ? "pointer"
+                                        : "default",
+                                    },
+                                    backgroundColor: isSelected
+                                      ? "#1e3a5f"
+                                      : "transparent",
+                                    border: isSelected
+                                      ? "2px solid #3b82f6"
+                                      : "none",
                                   }}
                                 >
                                   <TableCell
@@ -830,18 +1063,25 @@ export default function TradingPage() {
                 <FormControl fullWidth size="small">
                   <Select
                     value={orderKind}
-                    onChange={(e) => setOrderKind(e.target.value as OrderKind)}
+                    onChange={(e) => {
+                      setOrderKind(e.target.value as OrderKind);
+                      // Reset fields when switching order types
+                      setSelectedOrderId(null);
+                      setPrice("");
+                      setStopPrice("");
+                      setLimitPrice("");
+                    }}
                     sx={commonStyles.inputFieldStyles}
                   >
                     <MenuItem value={OrderKind.LIMIT}>Limit Order</MenuItem>
-                    <MenuItem value={OrderKind.MARKET} disabled>
-                      Market Order (Coming Soon)
+                    <MenuItem value={OrderKind.MARKET}>
+                      Market Order (Best Price)
                     </MenuItem>
-                    <MenuItem value={OrderKind.STOP_LOSS} disabled>
-                      Stop Loss (Coming Soon)
+                    <MenuItem value={OrderKind.TAKE_ORDER}>
+                      Take Order (Select Specific)
                     </MenuItem>
-                    <MenuItem value={OrderKind.STOP_LIMIT} disabled>
-                      Stop Limit (Coming Soon)
+                    <MenuItem value={OrderKind.STOP_LIMIT}>
+                      Stop Limit Order
                     </MenuItem>
                   </Select>
                 </FormControl>
@@ -897,16 +1137,39 @@ export default function TradingPage() {
 
               {/* Input Fields */}
               <Stack spacing={3}>
+                {/* Market Order Information */}
+                {orderKind === OrderKind.MARKET && (
+                  <Alert severity="info">
+                    Market order will automatically execute at the best
+                    available price in the order book.
+                  </Alert>
+                )}
+
+                {/* Take Order Information */}
+                {orderKind === OrderKind.TAKE_ORDER && (
+                  <Alert severity="info">
+                    Click on a specific order in the order book to select it,
+                    then enter the amount you want to trade (or 0 for full
+                    amount).
+                  </Alert>
+                )}
+
+                {/* Amount Field - Always visible */}
                 <Box>
                   <Typography
                     variant="body2"
                     sx={{ mb: 1, color: "text.secondary" }}
                   >
                     Amount ({pairInfo.baseName})
+                    {orderKind === OrderKind.TAKE_ORDER && " (0 = full amount)"}
                   </Typography>
                   <TextField
                     fullWidth
-                    placeholder="0.00"
+                    placeholder={
+                      orderKind === OrderKind.TAKE_ORDER
+                        ? "0 for full amount"
+                        : "0.00"
+                    }
                     type="number"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
@@ -918,27 +1181,211 @@ export default function TradingPage() {
                   />
                 </Box>
 
-                <Box>
-                  <Typography
-                    variant="body2"
-                    sx={{ mb: 1, color: "text.secondary" }}
-                  >
-                    Price ({pairInfo.quoteName} per {pairInfo.baseName})
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    placeholder="0.00"
-                    type="number"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    slotProps={{
-                      input: {
-                        sx: commonStyles.inputFieldStyles,
-                      },
-                    }}
-                  />
-                </Box>
+                {/* Price Field - Only for Limit Orders */}
+                {orderKind === OrderKind.LIMIT && (
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      sx={{ mb: 1, color: "text.secondary" }}
+                    >
+                      Price ({pairInfo.quoteName} per {pairInfo.baseName})
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      placeholder="0.00"
+                      type="number"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      slotProps={{
+                        input: {
+                          sx: commonStyles.inputFieldStyles,
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
 
+                {/* Stop Price and Limit Price - Only for Stop Limit Orders */}
+                {orderKind === OrderKind.STOP_LIMIT && (
+                  <>
+                    <Box>
+                      <Typography
+                        variant="body2"
+                        sx={{ mb: 1, color: "text.secondary" }}
+                      >
+                        Stop Price ({pairInfo.quoteName} per {pairInfo.baseName}
+                        )
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        placeholder="0.00"
+                        type="number"
+                        value={stopPrice}
+                        onChange={(e) => setStopPrice(e.target.value)}
+                        slotProps={{
+                          input: {
+                            sx: commonStyles.inputFieldStyles,
+                          },
+                        }}
+                      />
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          mt: 0.5,
+                          color: "text.secondary",
+                          display: "block",
+                        }}
+                      >
+                        {tradeType === OrderType.BUY
+                          ? "Order triggers when price rises to or above this level"
+                          : "Order triggers when price falls to or below this level"}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography
+                        variant="body2"
+                        sx={{ mb: 1, color: "text.secondary" }}
+                      >
+                        Limit Price ({pairInfo.quoteName} per{" "}
+                        {pairInfo.baseName})
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        placeholder="0.00"
+                        type="number"
+                        value={limitPrice}
+                        onChange={(e) => setLimitPrice(e.target.value)}
+                        slotProps={{
+                          input: {
+                            sx: commonStyles.inputFieldStyles,
+                          },
+                        }}
+                      />
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          mt: 0.5,
+                          color: "text.secondary",
+                          display: "block",
+                        }}
+                      >
+                        The limit order price after trigger
+                      </Typography>
+                    </Box>
+                  </>
+                )}
+
+                {/* Market Order - Best Price Display */}
+                {orderKind === OrderKind.MARKET && (
+                  <Box
+                    sx={{
+                      p: 2,
+                      backgroundColor: "#1e4d2b",
+                      borderRadius: "8px",
+                      border: "2px solid #10b981",
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: "bold", color: "#10b981", mb: 1 }}
+                    >
+                      Best Available Price
+                    </Typography>
+                    {(() => {
+                      const bestOrder =
+                        tradeType === OrderType.BUY
+                          ? orderBook.sellOrders[0]
+                          : orderBook.buyOrders[0];
+                      if (!bestOrder) {
+                        return (
+                          <Typography variant="body2" color="error">
+                            No orders available
+                          </Typography>
+                        );
+                      }
+                      return (
+                        <>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              mb: 0.5,
+                            }}
+                          >
+                            <Typography variant="body2" color="text.secondary">
+                              Price:
+                            </Typography>
+                            <Typography variant="body2" color="text.primary">
+                              {formatPrice(bestOrder.price)}{" "}
+                              {pairInfo.quoteName}
+                            </Typography>
+                          </Box>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <Typography variant="body2" color="text.secondary">
+                              Available:
+                            </Typography>
+                            <Typography variant="body2" color="text.primary">
+                              {formatTokenAmount(
+                                bestOrder.amount - bestOrder.filled
+                              )}{" "}
+                              {pairInfo.baseName}
+                            </Typography>
+                          </Box>
+                        </>
+                      );
+                    })()}
+                  </Box>
+                )}
+
+                {/* Take Order - Selected Order Display */}
+                {orderKind === OrderKind.TAKE_ORDER && selectedOrderId && (
+                  <Box
+                    sx={{
+                      p: 2,
+                      backgroundColor: "#1e3a5f",
+                      borderRadius: "8px",
+                      border: "2px solid #3b82f6",
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: "bold", color: "#3b82f6", mb: 1 }}
+                    >
+                      Selected Order
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        mb: 0.5,
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        Order ID:
+                      </Typography>
+                      <Typography variant="body2" color="text.primary">
+                        #{selectedOrderId.toString()}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        Price:
+                      </Typography>
+                      <Typography variant="body2" color="text.primary">
+                        {price} {pairInfo.quoteName}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+
+                {/* Summary Box */}
                 <Box
                   sx={{ p: 2, backgroundColor: "#1f2937", borderRadius: "8px" }}
                 >
@@ -953,7 +1400,15 @@ export default function TradingPage() {
                       Total Cost:
                     </Typography>
                     <Typography variant="body2" color="text.primary">
-                      {calculateTotal()} {pairInfo.quoteName}
+                      {orderKind === OrderKind.MARKET ||
+                      orderKind === OrderKind.TAKE_ORDER
+                        ? calculateMarketTotal()
+                        : orderKind === OrderKind.STOP_LIMIT && limitPrice
+                        ? (
+                            parseFloat(amount || "0") * parseFloat(limitPrice)
+                          ).toFixed(6)
+                        : calculateTotal()}{" "}
+                      {pairInfo.quoteName}
                     </Typography>
                   </Box>
                   <Box
@@ -977,7 +1432,16 @@ export default function TradingPage() {
                 {isConnected && hasInsufficientBalance() && (
                   <Alert severity="warning" sx={{ mt: 2 }}>
                     Insufficient balance. You need{" "}
-                    {tradeType === OrderType.SELL ? amount : calculateTotal()}{" "}
+                    {tradeType === OrderType.SELL
+                      ? amount
+                      : orderKind === OrderKind.MARKET ||
+                        orderKind === OrderKind.TAKE_ORDER
+                      ? calculateMarketTotal()
+                      : orderKind === OrderKind.STOP_LIMIT && limitPrice
+                      ? (
+                          parseFloat(amount || "0") * parseFloat(limitPrice)
+                        ).toFixed(6)
+                      : calculateTotal()}{" "}
                     {tradeType === OrderType.SELL
                       ? pairInfo.baseName
                       : pairInfo.quoteName}{" "}
@@ -995,7 +1459,11 @@ export default function TradingPage() {
                       isPending ||
                       isConfirming ||
                       !amount ||
-                      !price ||
+                      (orderKind === OrderKind.LIMIT && !price) ||
+                      (orderKind === OrderKind.TAKE_ORDER &&
+                        !selectedOrderId) ||
+                      (orderKind === OrderKind.STOP_LIMIT &&
+                        (!stopPrice || !limitPrice)) ||
                       hasInsufficientBalance()
                     }
                     sx={{
@@ -1021,14 +1489,32 @@ export default function TradingPage() {
                               ? pairInfo.baseName
                               : pairInfo.quoteName
                           }...`
+                        : orderKind === OrderKind.MARKET
+                        ? "Executing Market Order..."
+                        : orderKind === OrderKind.TAKE_ORDER
+                        ? "Taking Order..."
                         : "Placing Order..."
                       : hasInsufficientBalance()
                       ? "Insufficient Balance"
+                      : orderKind === OrderKind.TAKE_ORDER && !selectedOrderId
+                      ? "Select Order from Book"
                       : needsApproval()
                       ? `Approve ${
                           tradeType === OrderType.SELL
                             ? pairInfo.baseName
                             : pairInfo.quoteName
+                        }`
+                      : orderKind === OrderKind.MARKET
+                      ? `${
+                          tradeType === OrderType.BUY ? "Buy" : "Sell"
+                        } at Market`
+                      : orderKind === OrderKind.TAKE_ORDER
+                      ? `Take ${
+                          tradeType === OrderType.BUY ? "Buy" : "Sell"
+                        } Order`
+                      : orderKind === OrderKind.STOP_LIMIT
+                      ? `Place Stop-Limit ${
+                          tradeType === OrderType.BUY ? "Buy" : "Sell"
                         }`
                       : `${tradeType === OrderType.BUY ? "Buy" : "Sell"} ${
                           pairInfo.baseName

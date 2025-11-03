@@ -36,12 +36,12 @@ export enum OrderType {
   SELL = 1,
 }
 
-// Future order types for future proofing
+// Order types
 export enum OrderKind {
   LIMIT = "LIMIT",
-  MARKET = "MARKET", // Not implemented yet
-  STOP_LOSS = "STOP_LOSS", // Not implemented yet
-  STOP_LIMIT = "STOP_LIMIT", // Not implemented yet
+  MARKET = "MARKET", // Automatically takes best price
+  TAKE_ORDER = "TAKE_ORDER", // Manually select specific order
+  STOP_LIMIT = "STOP_LIMIT",
 }
 
 // DEX contract ABI
@@ -85,6 +85,25 @@ export const DEX_ABI = [
     type: "function",
   },
   {
+    inputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    name: "stopOrders",
+    outputs: [
+      { internalType: "uint256", name: "id", type: "uint256" },
+      { internalType: "address", name: "trader", type: "address" },
+      { internalType: "enum Dex.actionType", name: "action", type: "uint8" },
+      { internalType: "address", name: "base", type: "address" },
+      { internalType: "address", name: "quote", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+      { internalType: "uint256", name: "stopPrice", type: "uint256" },
+      { internalType: "uint256", name: "limitPrice", type: "uint256" },
+      { internalType: "uint256", name: "ts", type: "uint256" },
+      { internalType: "bool", name: "active", type: "bool" },
+      { internalType: "bool", name: "triggered", type: "bool" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [
       { internalType: "enum Dex.actionType", name: "action", type: "uint8" },
       { internalType: "address", name: "base", type: "address" },
@@ -94,6 +113,37 @@ export const DEX_ABI = [
     ],
     name: "placeLimit",
     outputs: [{ internalType: "uint256", name: "orderId", type: "uint256" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "enum Dex.actionType", name: "action", type: "uint8" },
+      { internalType: "address", name: "base", type: "address" },
+      { internalType: "address", name: "quote", type: "address" },
+      { internalType: "uint256", name: "amount", type: "uint256" },
+      { internalType: "uint256", name: "stopPrice", type: "uint256" },
+      { internalType: "uint256", name: "limitPrice", type: "uint256" },
+    ],
+    name: "placeStopLimit",
+    outputs: [{ internalType: "uint256", name: "stopId", type: "uint256" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "orderId", type: "uint256" },
+      { internalType: "uint256", name: "baseAmount", type: "uint256" },
+    ],
+    name: "takeOrder",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "stopId", type: "uint256" }],
+    name: "cancelStop",
+    outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
@@ -206,6 +256,93 @@ export const DEX_ABI = [
       },
     ],
     name: "OrderFilled",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "id",
+        type: "uint256",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "trader",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "enum Dex.actionType",
+        name: "action",
+        type: "uint8",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "base",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "quote",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "stopPrice",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "limitPrice",
+        type: "uint256",
+      },
+    ],
+    name: "StopLimitPlaced",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "id",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "newOrderId",
+        type: "uint256",
+      },
+    ],
+    name: "StopLimitTriggered",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "id",
+        type: "uint256",
+      },
+    ],
+    name: "StopLimitCancelled",
     type: "event",
   },
 ] as const;
