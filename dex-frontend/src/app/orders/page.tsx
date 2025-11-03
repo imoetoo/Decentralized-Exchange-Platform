@@ -33,7 +33,7 @@ import {
   Order,
   StopLimitOrder,
 } from "@/hooks/useDex";
-import { OrderType } from "@/constants";
+import { OrderType, OrderKind } from "@/constants";
 import {
   USDT_ADDRESS,
   USDC_ADDRESS,
@@ -61,8 +61,14 @@ const getTokenSymbol = (address: string): string => {
 
 export default function OrdersPage() {
   const { address, isConnected } = useAccount();
-  const { userOrders, stopLimitOrders, tradeHistory, isLoading } =
-    useUserOrders();
+  const {
+    userOrders,
+    stopLimitOrders,
+    tradeHistory,
+    isLoading,
+    refresh,
+    lastUpdated,
+  } = useUserOrders();
   const {
     cancelOrder,
     cancelStopLimit,
@@ -203,26 +209,50 @@ export default function OrdersPage() {
           >
             Orders
           </Typography>
-          {tabValue < 3 && (
+          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+            {lastUpdated && (
+              <Typography variant="caption" color="text.secondary">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </Typography>
+            )}
             <Button
               variant="outlined"
-              color="error"
-              onClick={handleCancelAll}
-              disabled={
-                filteredOrders.length === 0 || isPending || isConfirming
-              }
+              color="primary"
+              onClick={refresh}
+              disabled={isLoading}
+              startIcon={<Refresh />}
               sx={{
-                borderColor: "#ef4444",
-                color: "#ef4444",
+                borderColor: "#14b8a6",
+                color: "#14b8a6",
                 "&:hover": {
-                  borderColor: "#dc2626",
-                  backgroundColor: "#7f1d1d",
+                  borderColor: "#0d9488",
+                  backgroundColor: "#134e4a",
                 },
               }}
             >
-              Cancel All Open Orders
+              Refresh
             </Button>
-          )}
+            {tabValue < 3 && (
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleCancelAll}
+                disabled={
+                  filteredOrders.length === 0 || isPending || isConfirming
+                }
+                sx={{
+                  borderColor: "#ef4444",
+                  color: "#ef4444",
+                  "&:hover": {
+                    borderColor: "#dc2626",
+                    backgroundColor: "#7f1d1d",
+                  },
+                }}
+              >
+                Cancel All Open Orders
+              </Button>
+            )}
+          </Box>
         </Box>
 
         {/* Transaction Status */}
@@ -378,13 +408,29 @@ export default function OrdersPage() {
                         : cancellingOrderId === order.id;
 
                       // Determine order type label
-                      const orderTypeLabel = isStopOrder
-                        ? order.action === OrderType.BUY
-                          ? "Stop-Limit Buy"
-                          : "Stop-Limit Sell"
-                        : order.action === OrderType.BUY
-                        ? "Limit Buy"
-                        : "Limit Sell";
+                      let orderTypeLabel: string;
+                      if (isStopOrder) {
+                        orderTypeLabel =
+                          order.action === OrderType.BUY
+                            ? "Stop-Limit Buy"
+                            : "Stop-Limit Sell";
+                      } else if (regularOrder?.orderKind === OrderKind.LIMIT) {
+                        orderTypeLabel =
+                          order.action === OrderType.BUY
+                            ? "Limit Buy"
+                            : "Limit Sell";
+                      } else if (
+                        regularOrder?.orderKind === OrderKind.TAKE_ORDER
+                      ) {
+                        orderTypeLabel =
+                          order.action === OrderType.BUY
+                            ? "Take/Market Buy"
+                            : "Take/Market Sell";
+                      } else {
+                        // Fallback for orders without orderKind
+                        orderTypeLabel =
+                          order.action === OrderType.BUY ? "Buy" : "Sell";
+                      }
 
                       return (
                         <TableRow

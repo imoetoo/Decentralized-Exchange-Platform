@@ -14,6 +14,7 @@ import {
   STABLECOIN_DECIMALS,
   PRICE_PRECISION,
   OrderType,
+  OrderKind,
 } from "@/constants";
 
 export interface Order {
@@ -27,6 +28,7 @@ export interface Order {
   price: bigint;
   ts: bigint;
   active: boolean;
+  orderKind?: OrderKind; // Track how the order was executed (for trade history)
 }
 
 export interface StopLimitOrder {

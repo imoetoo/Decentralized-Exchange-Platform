@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAccount, usePublicClient, useBlockNumber } from "wagmi";
-import { DEX_CONTRACT_ADDRESS, DEX_ABI } from "@/constants";
+import { DEX_CONTRACT_ADDRESS, DEX_ABI, OrderKind } from "@/constants";
 import { Order, StopLimitOrder } from "./useDex";
 
 /**
@@ -15,6 +15,13 @@ export function useUserOrders() {
   const [stopLimitOrders, setStopLimitOrders] = useState<StopLimitOrder[]>([]);
   const [tradeHistory, setTradeHistory] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Manual refresh function
+  const refresh = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
 
   useEffect(() => {
     const fetchUserOrders = async () => {
@@ -105,6 +112,7 @@ export function useUserOrders() {
               price: orderData[7],
               ts: orderData[8],
               active: orderData[9],
+              orderKind: OrderKind.LIMIT, // All NewOrder events are limit orders
             };
 
             return order;
@@ -153,6 +161,8 @@ export function useUserOrders() {
           Boolean
         ) as StopLimitOrder[];
 
+        console.log(`Fetched ${allOrders.length} total orders, ${allStopOrders.length} stop orders`);
+
         // Separate active regular orders first (these always work)
         // Active means: order is active AND not fully filled
         const activeOrders = allOrders.filter(
@@ -161,6 +171,8 @@ export function useUserOrders() {
         const activeStopOrders = allStopOrders.filter(
           (order) => order.active && !order.triggered
         );
+
+        console.log(`Active orders: ${activeOrders.length}, Active stop orders: ${activeStopOrders.length}`);
 
         // Try to fetch trade history, but don't let it break the entire component
         let completedOrders: Order[] = [];
@@ -183,10 +195,12 @@ export function useUserOrders() {
             toBlock: "latest",
           });
 
-          // Collect order IDs where user was the maker (their order got filled)
+          // Collect order IDs where user was the maker (their order got taken)
           const userMakerOrderIds = new Set<bigint>();
-          // Collect OrderFilled events where user was the taker (takerId = 0 means direct take)
-          const potentialTakerTrades: Array<{
+          // Collect order IDs where user placed a limit order that matched immediately (taker)
+          const userTakerOrderIds = new Set<bigint>();
+          // Collect OrderFilled events where user used takeOrder directly (takerId = 0)
+          const potentialDirectTakerTrades: Array<{
             makerId: bigint;
             baseAmount: bigint;
             quoteAmount: bigint;
@@ -204,9 +218,14 @@ export function useUserOrders() {
               userMakerOrderIds.add(makerId);
             }
 
+            // If user created a limit order that matched immediately (taker)
+            if (takerId !== BigInt(0) && userOrderIds.includes(takerId)) {
+              userTakerOrderIds.add(takerId);
+            }
+
             // If takerId is 0, it means someone used takeOrder directly
             if (takerId === BigInt(0) && log.transactionHash) {
-              potentialTakerTrades.push({
+              potentialDirectTakerTrades.push({
                 makerId,
                 baseAmount,
                 quoteAmount,
@@ -215,8 +234,8 @@ export function useUserOrders() {
             }
           });
 
-          // Check which taker trades belong to the current user
-          const userTakerTrades: Array<{
+          // Check which direct taker trades belong to the current user
+          const userDirectTakerTrades: Array<{
             makerId: bigint;
             baseAmount: bigint;
             quoteAmount: bigint;
@@ -224,14 +243,14 @@ export function useUserOrders() {
             blockNumber: bigint;
           }> = [];
 
-          for (const trade of potentialTakerTrades) {
+          for (const trade of potentialDirectTakerTrades) {
             try {
               const tx = await publicClient.getTransaction({
                 hash: trade.txHash as `0x${string}`,
               });
 
               if (tx && tx.from.toLowerCase() === address.toLowerCase()) {
-                userTakerTrades.push({
+                userDirectTakerTrades.push({
                   ...trade,
                   blockNumber: tx.blockNumber!,
                 });
@@ -266,6 +285,7 @@ export function useUserOrders() {
                   price: orderData[7],
                   ts: orderData[8],
                   active: orderData[9],
+                  orderKind: OrderKind.LIMIT, // Maker orders are always limit orders
                 };
 
                 return order;
@@ -276,8 +296,41 @@ export function useUserOrders() {
             }
           );
 
-          // Fetch details for taker trades (user took someone else's order)
-          const takerTradePromises = userTakerTrades.map(
+          // Fetch details for limit orders that matched immediately (acted as takers)
+          const limitTakerPromises = Array.from(userTakerOrderIds).map(
+            async (id) => {
+              try {
+                const orderData = (await publicClient.readContract({
+                  address: DEX_CONTRACT_ADDRESS,
+                  abi: DEX_ABI,
+                  functionName: "orders",
+                  args: [id],
+                })) as any;
+
+                const order: Order = {
+                  id: orderData[0],
+                  trader: orderData[1],
+                  action: orderData[2],
+                  base: orderData[3],
+                  quote: orderData[4],
+                  amount: orderData[5],
+                  filled: orderData[6],
+                  price: orderData[7],
+                  ts: orderData[8],
+                  active: orderData[9],
+                  orderKind: OrderKind.LIMIT, // These are limit orders that matched immediately
+                };
+
+                return order;
+              } catch (error) {
+                console.error(`Error fetching limit taker order ${id}:`, error);
+                return null;
+              }
+            }
+          );
+
+          // Fetch details for direct taker trades (user used takeOrder/marketOrder)
+          const directTakerTradePromises = userDirectTakerTrades.map(
             async (trade, index) => {
               try {
                 const makerOrderData = (await publicClient.readContract({
@@ -306,6 +359,7 @@ export function useUserOrders() {
                     (trade.quoteAmount * BigInt(1000000)) / trade.baseAmount, // Calculate effective price
                   ts: block.timestamp,
                   active: false,
+                  orderKind: OrderKind.TAKE_ORDER, // Taker orders (both Take Order and Market Order use takeOrder)
                 };
 
                 return takerOrder;
@@ -320,16 +374,28 @@ export function useUserOrders() {
             Boolean
           ) as Order[];
 
-          const takerTrades = (await Promise.all(takerTradePromises)).filter(
-            Boolean
-          ) as Order[];
+          const limitTakerTrades = (
+            await Promise.all(limitTakerPromises)
+          ).filter(Boolean) as Order[];
 
-          // Combine maker and taker trades
-          const allTrades = [...makerTrades, ...takerTrades];
+          const directTakerTrades = (
+            await Promise.all(directTakerTradePromises)
+          ).filter(Boolean) as Order[];
+
+          // Combine all trades: maker trades, limit orders that matched immediately, and direct taker trades
+          const allTrades = [
+            ...makerTrades,
+            ...limitTakerTrades,
+            ...directTakerTrades,
+          ];
 
           // Trade history: all trades (maker and taker) that have been filled
           completedOrders = allTrades.filter(
             (order) => order.filled > BigInt(0)
+          );
+
+          console.log(
+            `Trade history: ${completedOrders.length} completed trades (${makerTrades.length} maker, ${limitTakerTrades.length} limit taker, ${directTakerTrades.length} direct taker)`
           );
         } catch (tradeError) {
           console.error("Error fetching trade history:", tradeError);
@@ -350,6 +416,7 @@ export function useUserOrders() {
         setUserOrders(sortedActiveOrders);
         setStopLimitOrders(sortedActiveStopOrders);
         setTradeHistory(sortedCompletedOrders);
+        setLastUpdated(new Date());
       } catch (error) {
         console.error("Error fetching user orders:", error);
         setUserOrders([]);
@@ -361,12 +428,14 @@ export function useUserOrders() {
     };
 
     fetchUserOrders();
-  }, [address, publicClient, blockNumber]); // Re-fetch when block number changes
+  }, [address, publicClient, blockNumber, refreshTrigger]); // Re-fetch when block number changes or manual refresh
 
   return {
     userOrders,
     stopLimitOrders,
     tradeHistory,
     isLoading,
+    refresh,
+    lastUpdated,
   };
 }
