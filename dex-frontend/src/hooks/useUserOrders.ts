@@ -153,83 +153,195 @@ export function useUserOrders() {
           Boolean
         ) as StopLimitOrder[];
 
-        // Fetch OrderFilled events to get accurate trade history
-        const filledLogs = await publicClient.getLogs({
-          address: DEX_CONTRACT_ADDRESS,
-          event: {
-            type: "event",
-            name: "OrderFilled",
-            inputs: [
-              { type: "uint256", name: "takerId", indexed: false },
-              { type: "uint256", name: "makerId", indexed: false },
-              { type: "uint256", name: "baseAmount", indexed: false },
-              { type: "uint256", name: "quoteAmount", indexed: false },
-            ],
-          },
-          fromBlock: BigInt(0),
-          toBlock: "latest",
-        });
-
-        // Get unique order IDs that were involved in trades (either as maker or taker)
-        const tradeOrderIds = new Set<bigint>();
-        filledLogs.forEach((log: any) => {
-          const makerId = log.args.makerId as bigint;
-          const takerId = log.args.takerId as bigint;
-          tradeOrderIds.add(makerId);
-          tradeOrderIds.add(takerId);
-        });
-
-        // Filter to only include user's orders that were filled
-        const userTradeOrderIds = userOrderIds.filter((id) =>
-          tradeOrderIds.has(id)
+        // Separate active regular orders first (these always work)
+        // Active means: order is active AND not fully filled
+        const activeOrders = allOrders.filter(
+          (order) => order.active && order.filled < order.amount
         );
-
-        // Fetch details for filled orders
-        const tradeOrdersPromises = userTradeOrderIds.map(async (id) => {
-          try {
-            const orderData = (await publicClient.readContract({
-              address: DEX_CONTRACT_ADDRESS,
-              abi: DEX_ABI,
-              functionName: "orders",
-              args: [id],
-            })) as any;
-
-            const order: Order = {
-              id: orderData[0],
-              trader: orderData[1],
-              action: orderData[2],
-              base: orderData[3],
-              quote: orderData[4],
-              amount: orderData[5],
-              filled: orderData[6],
-              price: orderData[7],
-              ts: orderData[8],
-              active: orderData[9],
-            };
-
-            return order;
-          } catch (error) {
-            console.error(`Error fetching trade order ${id}:`, error);
-            return null;
-          }
-        });
-
-        const tradeOrders = (await Promise.all(tradeOrdersPromises)).filter(
-          Boolean
-        ) as Order[];
-
-        // Separate active and completed regular orders
-        const activeOrders = allOrders.filter((order) => order.active);
-
-        // Trade history: orders that have been filled (partially or fully)
-        const completedOrders = tradeOrders.filter(
-          (order) => order.filled > BigInt(0)
-        );
-
-        // Filter active stop orders (not triggered, not cancelled)
         const activeStopOrders = allStopOrders.filter(
           (order) => order.active && !order.triggered
         );
+
+        // Try to fetch trade history, but don't let it break the entire component
+        let completedOrders: Order[] = [];
+
+        try {
+          // Fetch OrderFilled events to get accurate trade history
+          const filledLogs = await publicClient.getLogs({
+            address: DEX_CONTRACT_ADDRESS,
+            event: {
+              type: "event",
+              name: "OrderFilled",
+              inputs: [
+                { type: "uint256", name: "takerId", indexed: false },
+                { type: "uint256", name: "makerId", indexed: false },
+                { type: "uint256", name: "baseAmount", indexed: false },
+                { type: "uint256", name: "quoteAmount", indexed: false },
+              ],
+            },
+            fromBlock: BigInt(0),
+            toBlock: "latest",
+          });
+
+          // Collect order IDs where user was the maker (their order got filled)
+          const userMakerOrderIds = new Set<bigint>();
+          // Collect OrderFilled events where user was the taker (takerId = 0 means direct take)
+          const potentialTakerTrades: Array<{
+            makerId: bigint;
+            baseAmount: bigint;
+            quoteAmount: bigint;
+            txHash: string;
+          }> = [];
+
+          filledLogs.forEach((log: any) => {
+            const makerId = log.args.makerId as bigint;
+            const takerId = log.args.takerId as bigint;
+            const baseAmount = log.args.baseAmount as bigint;
+            const quoteAmount = log.args.quoteAmount as bigint;
+
+            // If user created the maker order (their order got taken)
+            if (userOrderIds.includes(makerId)) {
+              userMakerOrderIds.add(makerId);
+            }
+
+            // If takerId is 0, it means someone used takeOrder directly
+            if (takerId === BigInt(0) && log.transactionHash) {
+              potentialTakerTrades.push({
+                makerId,
+                baseAmount,
+                quoteAmount,
+                txHash: log.transactionHash,
+              });
+            }
+          });
+
+          // Check which taker trades belong to the current user
+          const userTakerTrades: Array<{
+            makerId: bigint;
+            baseAmount: bigint;
+            quoteAmount: bigint;
+            txHash: string;
+            blockNumber: bigint;
+          }> = [];
+
+          console.log(
+            "Checking",
+            potentialTakerTrades.length,
+            "potential taker trades"
+          );
+
+          for (const trade of potentialTakerTrades) {
+            try {
+              const tx = await publicClient.getTransaction({
+                hash: trade.txHash as `0x${string}`,
+              });
+
+              if (tx && tx.from.toLowerCase() === address.toLowerCase()) {
+                userTakerTrades.push({
+                  ...trade,
+                  blockNumber: tx.blockNumber!,
+                });
+              }
+            } catch (error) {
+              console.error(
+                `Error fetching transaction ${trade.txHash}:`,
+                error
+              );
+            }
+          }
+
+          console.log("User maker orders:", Array.from(userMakerOrderIds));
+          console.log("User taker trades:", userTakerTrades);
+
+          // Fetch details for maker orders that were filled
+          const makerTradePromises = Array.from(userMakerOrderIds).map(
+            async (id) => {
+              try {
+                const orderData = (await publicClient.readContract({
+                  address: DEX_CONTRACT_ADDRESS,
+                  abi: DEX_ABI,
+                  functionName: "orders",
+                  args: [id],
+                })) as any;
+
+                const order: Order = {
+                  id: orderData[0],
+                  trader: orderData[1],
+                  action: orderData[2],
+                  base: orderData[3],
+                  quote: orderData[4],
+                  amount: orderData[5],
+                  filled: orderData[6],
+                  price: orderData[7],
+                  ts: orderData[8],
+                  active: orderData[9],
+                };
+
+                return order;
+              } catch (error) {
+                console.error(`Error fetching maker trade order ${id}:`, error);
+                return null;
+              }
+            }
+          );
+
+          // Fetch details for taker trades (user took someone else's order)
+          const takerTradePromises = userTakerTrades.map(async (trade) => {
+            try {
+              const makerOrderData = (await publicClient.readContract({
+                address: DEX_CONTRACT_ADDRESS,
+                abi: DEX_ABI,
+                functionName: "orders",
+                args: [trade.makerId],
+              })) as any;
+
+              // Get block to find timestamp
+              const block = await publicClient.getBlock({
+                blockNumber: trade.blockNumber,
+              });
+
+              // Create a synthetic order representing the taker's perspective
+              const takerOrder: Order = {
+                id: BigInt(0), // Taker orders don't have IDs
+                trader: address as string,
+                action: makerOrderData[2] === 0 ? 1 : 0, // Opposite of maker's action
+                base: makerOrderData[3],
+                quote: makerOrderData[4],
+                amount: trade.baseAmount,
+                filled: trade.baseAmount,
+                price: (trade.quoteAmount * BigInt(1000000)) / trade.baseAmount, // Calculate effective price
+                ts: block.timestamp,
+                active: false,
+              };
+
+              return takerOrder;
+            } catch (error) {
+              console.error(`Error creating taker trade record:`, error);
+              return null;
+            }
+          });
+
+          const makerTrades = (await Promise.all(makerTradePromises)).filter(
+            Boolean
+          ) as Order[];
+
+          const takerTrades = (await Promise.all(takerTradePromises)).filter(
+            Boolean
+          ) as Order[];
+
+          // Combine maker and taker trades
+          const allTrades = [...makerTrades, ...takerTrades];
+
+          // Trade history: all trades (maker and taker) that have been filled
+          completedOrders = allTrades.filter(
+            (order) => order.filled > BigInt(0)
+          );
+
+          console.log("Completed orders:", completedOrders);
+        } catch (tradeError) {
+          console.error("Error fetching trade history:", tradeError);
+          // Continue with empty trade history if there's an error
+        }
 
         // Sort by timestamp (newest first)
         activeOrders.sort((a, b) => Number(b.ts - a.ts));
