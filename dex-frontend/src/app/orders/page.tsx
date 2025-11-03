@@ -26,7 +26,13 @@ import { useState, useMemo } from "react";
 import { useAccount } from "wagmi";
 import * as commonStyles from "@/styles/commonStyles";
 import { useUserOrders } from "@/hooks/useUserOrders";
-import { useDex, formatPrice, formatTokenAmount } from "@/hooks/useDex";
+import {
+  useDex,
+  formatPrice,
+  formatTokenAmount,
+  Order,
+  StopLimitOrder,
+} from "@/hooks/useDex";
 import { OrderType } from "@/constants";
 import {
   USDT_ADDRESS,
@@ -55,33 +61,49 @@ const getTokenSymbol = (address: string): string => {
 
 export default function OrdersPage() {
   const { address, isConnected } = useAccount();
-  const { userOrders, tradeHistory, isLoading } = useUserOrders();
-  const { cancelOrder, isPending, isConfirming, isConfirmed, error } = useDex();
+  const { userOrders, stopLimitOrders, tradeHistory, isLoading } =
+    useUserOrders();
+  const {
+    cancelOrder,
+    cancelStopLimit,
+    isPending,
+    isConfirming,
+    isConfirmed,
+    error,
+  } = useDex();
 
   const [tabValue, setTabValue] = useState(0);
   const [cancellingOrderId, setCancellingOrderId] = useState<bigint | null>(
     null
   );
+  const [cancellingStopId, setCancellingStopId] = useState<bigint | null>(null);
   const [showAlert, setShowAlert] = useState(true);
 
   // Filter orders based on active tab
   const filteredOrders = useMemo(() => {
     if (tabValue === 0) {
-      // All open orders
-      return userOrders;
+      // All open orders - combine regular and stop limit orders
+      return [...userOrders, ...stopLimitOrders];
     } else if (tabValue === 1) {
       // Buy orders only
-      return userOrders.filter((order) => order.action === OrderType.BUY);
+      return [...userOrders, ...stopLimitOrders].filter(
+        (order) => order.action === OrderType.BUY
+      );
     } else if (tabValue === 2) {
       // Sell orders only
-      return userOrders.filter((order) => order.action === OrderType.SELL);
+      return [...userOrders, ...stopLimitOrders].filter(
+        (order) => order.action === OrderType.SELL
+      );
     } else {
       // Trade history (closed orders)
       return tradeHistory;
     }
-  }, [userOrders, tradeHistory, tabValue]);
+  }, [userOrders, stopLimitOrders, tradeHistory, tabValue]);
 
-  const handleCancelOrder = async (orderId: bigint) => {
+  const handleCancelOrder = async (
+    orderId: bigint,
+    isStopOrder: boolean = false
+  ) => {
     if (!isConnected) {
       alert("Please connect your wallet");
       return;
@@ -89,11 +111,34 @@ export default function OrdersPage() {
 
     try {
       setShowAlert(true);
-      setCancellingOrderId(orderId);
-      await cancelOrder(orderId);
-    } catch (err) {
+      if (isStopOrder) {
+        setCancellingStopId(orderId);
+        await cancelStopLimit(orderId);
+      } else {
+        setCancellingOrderId(orderId);
+        await cancelOrder(orderId);
+      }
+    } catch (err: any) {
       console.error("Error cancelling order:", err);
       setCancellingOrderId(null);
+      setCancellingStopId(null);
+      setShowAlert(true);
+
+      // Check if user rejected the transaction
+      if (
+        err?.message?.includes("User rejected") ||
+        err?.message?.includes("user rejected") ||
+        err?.code === 4001 ||
+        err?.code === "ACTION_REJECTED"
+      ) {
+        alert("Cancellation cancelled. No changes were made.");
+      } else {
+        alert(
+          `Failed to cancel order: ${
+            err?.message || "Unknown error"
+          }. Please try again.`
+        );
+      }
     }
   };
 
@@ -106,7 +151,8 @@ export default function OrdersPage() {
       )
     ) {
       filteredOrders.forEach((order) => {
-        handleCancelOrder(order.id);
+        const isStopOrder = "stopPrice" in order && "limitPrice" in order;
+        handleCancelOrder(order.id, isStopOrder);
       });
     }
   };
@@ -116,6 +162,7 @@ export default function OrdersPage() {
     if (isConfirmed) {
       const timer = setTimeout(() => {
         setCancellingOrderId(null);
+        setCancellingStopId(null);
         setShowAlert(false);
       }, 3000);
       return () => clearTimeout(timer);
@@ -185,7 +232,20 @@ export default function OrdersPage() {
             sx={{ mb: 3 }}
             onClose={() => setShowAlert(false)}
           >
-            {error && `Error: ${error.message}`}
+            {error &&
+              (() => {
+                const errorMsg = error.message || String(error);
+                // Check if user rejected the transaction
+                if (
+                  errorMsg.includes("User rejected") ||
+                  errorMsg.includes("user rejected") ||
+                  errorMsg.includes("User denied")
+                ) {
+                  return "Cancellation cancelled. No changes were made.";
+                }
+                // Show a friendly error message
+                return "Failed to cancel order. Please try again.";
+              })()}
             {isPending && "Please confirm the cancellation in your wallet..."}
             {isConfirming && "Cancellation is being confirmed..."}
             {isConfirmed && "Order cancelled successfully!"}
@@ -275,23 +335,56 @@ export default function OrdersPage() {
                     {filteredOrders.map((order) => {
                       const baseSymbol = getTokenSymbol(order.base);
                       const quoteSymbol = getTokenSymbol(order.quote);
-                      const amountFormatted = formatTokenAmount(
-                        tabValue === 3
-                          ? order.filled
-                          : order.amount - order.filled
-                      );
-                      const priceFormatted = formatPrice(order.price);
+
+                      // Check if this is a stop limit order
+                      const isStopOrder =
+                        "stopPrice" in order && "limitPrice" in order;
+                      const regularOrder = !isStopOrder
+                        ? (order as Order)
+                        : null;
+                      const stopOrder = isStopOrder
+                        ? (order as StopLimitOrder)
+                        : null;
+
+                      const amountFormatted = formatTokenAmount(order.amount);
+                      const filledFormatted = regularOrder
+                        ? formatTokenAmount(regularOrder.filled)
+                        : "0.00";
+
+                      // For stop orders, show limit price; for regular orders, show price
+                      const priceFormatted = isStopOrder
+                        ? formatPrice(stopOrder!.limitPrice)
+                        : formatPrice(regularOrder!.price);
+
+                      const stopPriceFormatted = isStopOrder
+                        ? formatPrice(stopOrder!.stopPrice)
+                        : null;
+
                       const total = (
                         parseFloat(amountFormatted) * parseFloat(priceFormatted)
                       ).toFixed(6);
+
                       const filledPercent =
-                        order.amount > 0
+                        regularOrder && regularOrder.amount > 0
                           ? (
-                              (Number(order.filled) / Number(order.amount)) *
+                              (Number(regularOrder.filled) /
+                                Number(regularOrder.amount)) *
                               100
                             ).toFixed(2)
                           : "0.00";
-                      const isCancelling = cancellingOrderId === order.id;
+
+                      const isCancelling = isStopOrder
+                        ? cancellingStopId === order.id
+                        : cancellingOrderId === order.id;
+
+                      // Determine order type label
+                      const orderTypeLabel = isStopOrder
+                        ? order.action === OrderType.BUY
+                          ? "Stop-Limit Buy"
+                          : "Stop-Limit Sell"
+                        : order.action === OrderType.BUY
+                        ? "Limit Buy"
+                        : "Limit Sell";
 
                       return (
                         <TableRow
@@ -318,11 +411,7 @@ export default function OrdersPage() {
                           </TableCell>
                           <TableCell>
                             <Chip
-                              label={
-                                order.action === OrderType.BUY
-                                  ? "Limit Buy"
-                                  : "Limit Sell"
-                              }
+                              label={orderTypeLabel}
                               size="small"
                               sx={{
                                 backgroundColor:
@@ -339,12 +428,36 @@ export default function OrdersPage() {
                           </TableCell>
                           <TableCell>
                             {tabValue === 3 ? (
+                              // Trade History - show if fully or partially filled
+                              regularOrder &&
+                              regularOrder.filled === regularOrder.amount ? (
+                                <Chip
+                                  label="Fully Filled"
+                                  size="small"
+                                  sx={{
+                                    backgroundColor: "#10b98120",
+                                    color: "#10b981",
+                                    fontWeight: "bold",
+                                  }}
+                                />
+                              ) : (
+                                <Chip
+                                  label={`Partially Filled (${filledPercent}%)`}
+                                  size="small"
+                                  sx={{
+                                    backgroundColor: "#14b8a620",
+                                    color: "#14b8a6",
+                                    fontWeight: "bold",
+                                  }}
+                                />
+                              )
+                            ) : isStopOrder ? (
                               <Chip
-                                label="Completed"
+                                label="Pending"
                                 size="small"
                                 sx={{
-                                  backgroundColor: "#6b728020",
-                                  color: "#9ca3af",
+                                  backgroundColor: "#f59e0b20",
+                                  color: "#f59e0b",
                                   fontWeight: "bold",
                                 }}
                               />
@@ -361,19 +474,67 @@ export default function OrdersPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2" color="text.primary">
-                              Amt: {amountFormatted}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              Limit: {priceFormatted}
-                            </Typography>
+                            {tabValue === 3 ? (
+                              // Trade History - show filled amounts
+                              <>
+                                <Typography
+                                  variant="body2"
+                                  color="text.primary"
+                                >
+                                  Filled: {filledFormatted}
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  Price: {priceFormatted}
+                                </Typography>
+                              </>
+                            ) : (
+                              <>
+                                <Typography
+                                  variant="body2"
+                                  color="text.primary"
+                                >
+                                  Amt: {amountFormatted}
+                                </Typography>
+                                {isStopOrder ? (
+                                  <>
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
+                                      Stop: {stopPriceFormatted}
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
+                                      Limit: {priceFormatted}
+                                    </Typography>
+                                  </>
+                                ) : (
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    Price: {priceFormatted}
+                                  </Typography>
+                                )}
+                              </>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Typography
                               variant="body2"
                               sx={{ fontWeight: "600", color: "text.primary" }}
                             >
-                              {total}
+                              {tabValue === 3
+                                ? (
+                                    parseFloat(filledFormatted) *
+                                    parseFloat(priceFormatted)
+                                  ).toFixed(6)
+                                : total}
                             </Typography>
                           </TableCell>
                           {tabValue < 3 && (
@@ -382,7 +543,9 @@ export default function OrdersPage() {
                                 <span>
                                   <IconButton
                                     size="small"
-                                    onClick={() => handleCancelOrder(order.id)}
+                                    onClick={() =>
+                                      handleCancelOrder(order.id, isStopOrder)
+                                    }
                                     disabled={
                                       isPending || isConfirming || isCancelling
                                     }

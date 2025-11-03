@@ -335,14 +335,28 @@ export default function TradingPage() {
         // Approve the token that will be spent
         const tokenToApprove =
           tradeType === OrderType.SELL ? pairInfo.base : pairInfo.quote;
-        // For BUY orders, approve the total quote amount
-        // For SELL orders, approve the base amount
-        const amountToApprove =
-          tradeType === OrderType.BUY
-            ? orderKind === OrderKind.LIMIT
-              ? calculateTotal()
-              : calculateMarketTotal()
-            : amount;
+
+        // Calculate the amount to approve based on order type
+        let amountToApprove: string;
+
+        if (tradeType === OrderType.BUY) {
+          // For BUY orders, approve quote tokens
+          if (orderKind === OrderKind.LIMIT) {
+            amountToApprove = calculateTotal();
+          } else if (orderKind === OrderKind.STOP_LIMIT) {
+            // For stop-limit, use limitPrice * amount
+            amountToApprove = (
+              parseFloat(amount) * parseFloat(limitPrice)
+            ).toFixed(6);
+          } else {
+            // Market and Take Order
+            amountToApprove = calculateMarketTotal();
+          }
+        } else {
+          // For SELL orders, approve base tokens (just the amount)
+          amountToApprove = amount;
+        }
+
         await approveToken(tokenToApprove, amountToApprove);
         // Don't place order yet - wait for approval to confirm
         // The approval confirmation will be handled by useEffect
