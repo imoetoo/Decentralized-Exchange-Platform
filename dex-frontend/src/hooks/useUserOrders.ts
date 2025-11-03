@@ -224,12 +224,6 @@ export function useUserOrders() {
             blockNumber: bigint;
           }> = [];
 
-          console.log(
-            "Checking",
-            potentialTakerTrades.length,
-            "potential taker trades"
-          );
-
           for (const trade of potentialTakerTrades) {
             try {
               const tx = await publicClient.getTransaction({
@@ -249,9 +243,6 @@ export function useUserOrders() {
               );
             }
           }
-
-          console.log("User maker orders:", Array.from(userMakerOrderIds));
-          console.log("User taker trades:", userTakerTrades);
 
           // Fetch details for maker orders that were filled
           const makerTradePromises = Array.from(userMakerOrderIds).map(
@@ -286,40 +277,44 @@ export function useUserOrders() {
           );
 
           // Fetch details for taker trades (user took someone else's order)
-          const takerTradePromises = userTakerTrades.map(async (trade) => {
-            try {
-              const makerOrderData = (await publicClient.readContract({
-                address: DEX_CONTRACT_ADDRESS,
-                abi: DEX_ABI,
-                functionName: "orders",
-                args: [trade.makerId],
-              })) as any;
+          const takerTradePromises = userTakerTrades.map(
+            async (trade, index) => {
+              try {
+                const makerOrderData = (await publicClient.readContract({
+                  address: DEX_CONTRACT_ADDRESS,
+                  abi: DEX_ABI,
+                  functionName: "orders",
+                  args: [trade.makerId],
+                })) as any;
 
-              // Get block to find timestamp
-              const block = await publicClient.getBlock({
-                blockNumber: trade.blockNumber,
-              });
+                // Get block to find timestamp
+                const block = await publicClient.getBlock({
+                  blockNumber: trade.blockNumber,
+                });
 
-              // Create a synthetic order representing the taker's perspective
-              const takerOrder: Order = {
-                id: BigInt(0), // Taker orders don't have IDs
-                trader: address as string,
-                action: makerOrderData[2] === 0 ? 1 : 0, // Opposite of maker's action
-                base: makerOrderData[3],
-                quote: makerOrderData[4],
-                amount: trade.baseAmount,
-                filled: trade.baseAmount,
-                price: (trade.quoteAmount * BigInt(1000000)) / trade.baseAmount, // Calculate effective price
-                ts: block.timestamp,
-                active: false,
-              };
+                // Create a synthetic order representing the taker's perspective
+                // Use a unique negative ID for each taker order to avoid React key conflicts
+                const takerOrder: Order = {
+                  id: BigInt(-1 - index), // Unique negative ID
+                  trader: address as string,
+                  action: makerOrderData[2] === 0 ? 1 : 0, // Opposite of maker's action
+                  base: makerOrderData[3],
+                  quote: makerOrderData[4],
+                  amount: trade.baseAmount,
+                  filled: trade.baseAmount,
+                  price:
+                    (trade.quoteAmount * BigInt(1000000)) / trade.baseAmount, // Calculate effective price
+                  ts: block.timestamp,
+                  active: false,
+                };
 
-              return takerOrder;
-            } catch (error) {
-              console.error(`Error creating taker trade record:`, error);
-              return null;
+                return takerOrder;
+              } catch (error) {
+                console.error(`Error creating taker trade record:`, error);
+                return null;
+              }
             }
-          });
+          );
 
           const makerTrades = (await Promise.all(makerTradePromises)).filter(
             Boolean
@@ -336,21 +331,25 @@ export function useUserOrders() {
           completedOrders = allTrades.filter(
             (order) => order.filled > BigInt(0)
           );
-
-          console.log("Completed orders:", completedOrders);
         } catch (tradeError) {
           console.error("Error fetching trade history:", tradeError);
           // Continue with empty trade history if there's an error
         }
 
-        // Sort by timestamp (newest first)
-        activeOrders.sort((a, b) => Number(b.ts - a.ts));
-        completedOrders.sort((a, b) => Number(b.ts - a.ts));
-        activeStopOrders.sort((a, b) => Number(b.ts - a.ts));
+        // Sort by timestamp (newest first) - create new arrays to avoid mutation
+        const sortedActiveOrders = [...activeOrders].sort((a, b) =>
+          Number(b.ts - a.ts)
+        );
+        const sortedCompletedOrders = [...completedOrders].sort((a, b) =>
+          Number(b.ts - a.ts)
+        );
+        const sortedActiveStopOrders = [...activeStopOrders].sort((a, b) =>
+          Number(b.ts - a.ts)
+        );
 
-        setUserOrders(activeOrders);
-        setStopLimitOrders(activeStopOrders);
-        setTradeHistory(completedOrders);
+        setUserOrders(sortedActiveOrders);
+        setStopLimitOrders(sortedActiveStopOrders);
+        setTradeHistory(sortedCompletedOrders);
       } catch (error) {
         console.error("Error fetching user orders:", error);
         setUserOrders([]);
