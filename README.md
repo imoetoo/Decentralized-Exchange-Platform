@@ -473,6 +473,111 @@ The script can be customized by editing `/scripts/seedOrderBook.js`:
 - Add or remove trading pairs
 - Change the number of orders per pair
 
+## 3.4 Advanced Order Types
+
+The DEX now supports multiple order types to give traders more flexibility and control:
+
+### **Limit Order**
+
+Place an order at a specific price that stays in the order book until filled or cancelled.
+
+**Features:**
+
+- Set your desired buy or sell price
+- Order remains active in the order book until matched
+- Can be partially filled by multiple takers
+- Cancel anytime before execution
+- Shows as "Limit Buy" or "Limit Sell" in order history
+
+**Use Case:** You want to buy WETH at exactly $4000 USDC and are willing to wait for the market to reach that price.
+
+### **Take Order**
+
+Manually select and take a specific order from the order book for instant execution.
+
+**Features:**
+
+- Browse the order book and select any order
+- Specify the amount you want to take
+- Instant execution at the order's price
+- Partially fill large orders
+- Shows as "Take/Market Buy" or "Take/Market Sell" in trade history
+
+**Use Case:** You see a specific order at $4050 in the order book that you want to take immediately.
+
+### **Market Order**
+
+Execute a trade instantly at the best available price in the order book.
+
+**Features:**
+
+- Automatically matches with the best price (lowest sell for buy, highest buy for sell)
+- Instant execution
+- No need to specify price
+- Slippage may occur if order book is thin
+- Shows as "Take/Market Buy" or "Take/Market Sell" in trade history
+
+**Use Case:** You want to buy WETH right now at whatever the best price currently is.
+
+### **Stop-Limit Order**
+
+A conditional order that triggers when a stop price is reached, then places a limit order.
+
+**Features:**
+
+- Set a **stop price** (trigger price) and **limit price** (execution price)
+- Order activates only when market reaches the stop price
+- Once triggered, becomes a limit order at your specified limit price
+- Shows as "Stop-Limit Buy" or "Stop-Limit Sell" in orders page
+- Can be cancelled before triggering
+
+**Use Case:** You want to buy WETH only if the price rises to $4100 (stop price), but don't want to pay more than $4120 (limit price).
+
+**Example:**
+
+- Current WETH price: $4000
+- Stop Price: $4100
+- Limit Price: $4120
+- When WETH reaches $4100, your order triggers and places a limit buy at $4120
+
+### **Order Type Comparison**
+
+| Order Type     | Execution          | Price Control         | Use Case                             |
+| -------------- | ------------------ | --------------------- | ------------------------------------ |
+| **Limit**      | When price matches | Exact price           | Patient trading at desired price     |
+| **Take Order** | Instant            | Select specific order | Taking a specific visible order      |
+| **Market**     | Instant            | Best available        | Quick entry/exit, high urgency       |
+| **Stop-Limit** | Conditional        | Stop + Limit prices   | Automated breakout/breakdown trading |
+
+### **How to Place Orders**
+
+1. Navigate to any trading pair page (e.g., WETH/USDC)
+2. Select order type from the dropdown menu
+3. Fill in the required fields:
+   - **Limit Order**: Amount + Price
+   - **Take Order**: Select order from book + Amount
+   - **Market Order**: Amount only
+   - **Stop-Limit Order**: Amount + Stop Price + Limit Price
+4. Approve token spending if needed (one-time per token)
+5. Confirm the transaction in MetaMask
+
+### **Viewing Your Orders**
+
+Navigate to the **Orders** page to see:
+
+- **Open Orders**: Active limit and stop-limit orders waiting to be filled
+- **Buy Orders**: All your active buy orders
+- **Sell Orders**: All your active sell orders
+- **Trade History**: Completed trades with accurate order type labels
+
+The trade history clearly indicates:
+
+- "Limit Buy/Sell" - Your limit orders that were filled
+- "Take/Market Buy/Sell" - Orders you executed via take order or market order
+- "Stop-Limit Buy/Sell" - Your triggered stop-limit orders
+
+You can also **cancel** any open limit or stop-limit order from the Orders page before they are executed.
+
 ## TODOs (DDL: End of Week 12)
 
 ##### Week 9 and Week 10
