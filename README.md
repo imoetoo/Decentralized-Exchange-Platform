@@ -131,12 +131,21 @@ Let's deploy the smart contracts to the local blockchain network.
    ```
 
 We have successfully deployed the smart contracts to the local blockchain network. <br>
-Now, let's test the contracts by minting some tokens to two test accounts (Alice and Bob). Minting is the process of creating new tokens out of thin air (ie. printing money) and assigning them to an account.
+Now, let's test the contracts by minting some tokens to three test accounts (Alice, Bob, and Carol). Minting is the process of creating new tokens out of thin air (ie. printing money) and assigning them to an account.
 
-6. Run `npx hardhat run scripts/mintTokensToAccount.js --network localhost` - This mints mock tokens (USDT, USDC, DAI, WETH, WBTC, PEPE, EIGEN) to test accounts (Alice, Bob, and Carol).
+6. Run `npx hardhat run scripts/mintTokensToAccount.js --network localhost` - This mints mock tokens to test accounts (Alice, Bob, and Carol) which correspond to Account #1, #2, and #3 from the Hardhat node.
+
+   **Amounts minted per account:**
+
+   - **USDT, USDC, DAI, EIGEN**: 100,000 tokens each
+   - **WBTC**: 100 tokens (reflecting Bitcoin's higher value)
+   - **WETH**: 100 tokens (reflecting Ethereum's value)
+   - **PEPE**: 10,000,000 tokens (reflecting meme coin characteristics)
+
+   **Important:** These are the accounts you'll import into MetaMask in step 1.3.2 to interact with the DEX. Each account will have identical token balances for testing purposes.
 
    - The script retrieves the deployed contract addresses from `deployed_addresses.json`.
-   - Address #0 sends transactions to the Token contracts to mint tokens to Address #1 (Alice), Address #2 (Bob), and Address #3 (Carol).
+   - Address #0 (deployer) sends transactions to the Token contracts to mint tokens to Address #1 (Alice), Address #2 (Bob), and Address #3 (Carol).
 
    Example output (Terminal 1):
 
@@ -171,10 +180,11 @@ To Summarise the block numbers:
 1. Block #1: Contract deployment (USDC)
 2. Block #2: Contract deployment (USDT)
 3. Block #3: Contract deployment (DEX)
-4. Block #4: Mint USDT to Alice
-5. Block #5: Mint USDC to Alice
-6. Block #6: Mint USDT to Bob
-7. Block #7: Mint USDC to Bob
+4. Block #4: Mint USDT to Alice (100,000 tokens)
+5. Block #5: Mint USDC to Alice (100,000 tokens)
+6. Block #6: Mint USDT to Bob (100,000 tokens)
+7. Block #7: Mint USDC to Bob (100,000 tokens)
+8. ... (continues for Carol and other tokens)
 
 Let's review the purpose of each folder in the repository:
 
@@ -278,7 +288,8 @@ To begin, ensure that you have MetaMask installed as a browser extension. You ca
 2. Import test accounts (Alice and Bob) into MetaMask using their private keys displayed in Terminal 1 when you started the local blockchain network.
 
    - Click on the account icon at the top right corner of MetaMask and select "Import Account".
-   - Paste the private key of Address #1 (Alice) and click "Import". Repeat for Address #2 (Bob).
+   - Paste the private key of Address #1 (Alice) and click "Import". Repeat for Address #2 (Bob) and optionally Address #3 (Carol).
+   - These accounts were minted with tokens in step 1.1 (Terminal 2, step 6), so they will have balances ready for trading.
 
    Example private keys from Terminal 1:
 

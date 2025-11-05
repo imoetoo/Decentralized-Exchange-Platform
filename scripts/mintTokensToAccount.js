@@ -21,12 +21,23 @@ async function main() {
     carol: carol.address,
   });
 
-  // Amount to mint to account
-  const mintPerAccount = ethers.parseUnits("100000", 6); // 100k
-
   for (const sym of symbols) {
     const addr = addresses[`Mock${sym}`];
     const token = await ethers.getContractAt("Token", addr);
+
+    // Determine mint amount based on token type
+    let mintPerAccount;
+    if (sym === "WBTC") {
+      mintPerAccount = ethers.parseUnits("100", 6); // 100 WBTC
+    } else if (sym === "WETH") {
+      mintPerAccount = ethers.parseUnits("100", 6); // 100 WETH
+    } else if (sym === "PEPE") {
+      mintPerAccount = ethers.parseUnits("10000000", 6); // 10 million PEPE
+    } else {
+      mintPerAccount = ethers.parseUnits("100000", 6); // 100k for stablecoins and other tokens
+    }
+
+    console.log(`Minting ${ethers.formatUnits(mintPerAccount, 6)} ${sym} to each account...`);
 
     // Three test people
     await (await token.mint(alice.address, mintPerAccount)).wait();
