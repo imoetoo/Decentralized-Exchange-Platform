@@ -630,6 +630,7 @@ Want to swap DAI for WETH but there's no direct DAI/WETH pair?
 **Route Visualization:**
 
 The page shows:
+
 - Complete trading path (e.g., DAI → USDC → WETH)
 - Number of hops required
 - Effective exchange rate (rounded to 2 decimal places)
