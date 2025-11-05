@@ -11,7 +11,15 @@ import {
   CardContent,
   Box,
 } from "@mui/material";
-import { SwapHoriz, Speed, Security, ViewList } from "@mui/icons-material";
+import {
+  SwapHoriz,
+  Speed,
+  Security,
+  ViewList,
+  Route,
+  AccountBalanceWallet,
+  TrendingUp,
+} from "@mui/icons-material";
 
 // Import styles
 import * as homeContentStyles from "@/styles/homeContentStyles";
@@ -262,7 +270,148 @@ export default function HomeContent() {
               </CardContent>
             </Card>
 
-            {/* My Orders Management */}
+            {/* Advanced Order Types */}
+            <Card
+              sx={{
+                ...homeContentStyles.featureCardStyles,
+                ...homeContentStyles.featureCardHoverStyles.green,
+              }}
+            >
+              <CardContent sx={homeContentStyles.cardContentStyles}>
+                <div
+                  className={
+                    homeContentStyles.classNames.featureIconContainer.green
+                  }
+                >
+                  <TrendingUp sx={{ color: "white" }} fontSize="large" />
+                </div>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    ...homeContentStyles.cardTitleStyles,
+                    ...commonStyles.commonSpacing.smallMargin,
+                  }}
+                >
+                  Advanced Order Types
+                </Typography>
+                <Typography
+                  sx={{
+                    ...homeContentStyles.cardDescriptionStyles,
+                    ...commonStyles.commonSpacing.mediumMargin,
+                  }}
+                >
+                  Trade with limit orders, market orders, take specific orders,
+                  and stop-limit orders. Multiple order types give you precise
+                  control over your trading strategy.
+                </Typography>
+                <Link href="/market">
+                  <Button
+                    variant="outlined"
+                    sx={homeContentStyles.featureButtonStyles.green}
+                    disabled={!isConnected}
+                  >
+                    {isConnected ? "Explore Orders" : "Connect Wallet"}
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Token Swap Router */}
+            <Card
+              sx={{
+                ...homeContentStyles.featureCardStyles,
+                ...homeContentStyles.featureCardHoverStyles.blue,
+              }}
+            >
+              <CardContent sx={homeContentStyles.cardContentStyles}>
+                <div
+                  className={
+                    homeContentStyles.classNames.featureIconContainer.blue
+                  }
+                >
+                  <Route sx={{ color: "white" }} fontSize="large" />
+                </div>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    ...homeContentStyles.cardTitleStyles,
+                    ...commonStyles.commonSpacing.smallMargin,
+                  }}
+                >
+                  Multi-Hop Token Swap
+                </Typography>
+                <Typography
+                  sx={{
+                    ...homeContentStyles.cardDescriptionStyles,
+                    ...commonStyles.commonSpacing.mediumMargin,
+                  }}
+                >
+                  Swap any token to any other token using intelligent routing.
+                  Our pathfinding algorithm finds the best multi-hop route for
+                  optimal pricing across trading pairs.
+                </Typography>
+                <Link href="/token-swap">
+                  <Button
+                    variant="outlined"
+                    sx={homeContentStyles.featureButtonStyles.blue}
+                    disabled={!isConnected}
+                  >
+                    {isConnected ? "Swap Tokens" : "Connect Wallet"}
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Portfolio Tracker */}
+            <Card
+              sx={{
+                ...homeContentStyles.featureCardStyles,
+                ...homeContentStyles.featureCardHoverStyles.purple,
+              }}
+            >
+              <CardContent sx={homeContentStyles.cardContentStyles}>
+                <div
+                  className={
+                    homeContentStyles.classNames.featureIconContainer.purple
+                  }
+                >
+                  <AccountBalanceWallet
+                    sx={{ color: "white" }}
+                    fontSize="large"
+                  />
+                </div>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    ...homeContentStyles.cardTitleStyles,
+                    ...commonStyles.commonSpacing.smallMargin,
+                  }}
+                >
+                  Portfolio Tracker
+                </Typography>
+                <Typography
+                  sx={{
+                    ...homeContentStyles.cardDescriptionStyles,
+                    ...commonStyles.commonSpacing.mediumMargin,
+                  }}
+                >
+                  Track all your token holdings and total portfolio value in
+                  real-time. View balances with live USD valuations based on
+                  current market prices from the order book.
+                </Typography>
+                <Link href="/portfolio">
+                  <Button
+                    variant="outlined"
+                    sx={homeContentStyles.featureButtonStyles.purple}
+                    disabled={!isConnected}
+                  >
+                    {isConnected ? "View Portfolio" : "Connect Wallet"}
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* My Orders Dashboard */}
             <Card
               sx={{
                 ...homeContentStyles.featureCardStyles,
