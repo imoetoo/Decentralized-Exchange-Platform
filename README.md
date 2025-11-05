@@ -589,6 +589,62 @@ The trade history clearly indicates:
 
 You can also **cancel** any open limit or stop-limit order from the Orders page before they are executed.
 
+## 3.5 Multi-Hop Token Swap Router
+
+The Token Swap page provides intelligent routing to swap between any two tokens, even if they don't have a direct trading pair.
+
+**Features:**
+
+- **Automatic Path Finding**: Uses Dijkstra's algorithm to find the optimal trading route
+- **Multi-Hop Support**: Swaps through intermediate tokens automatically (e.g., DAI → USDC → WETH)
+- **Best Price Guarantee**: Calculates the route that maximizes your output amount
+- **Visual Route Display**: Shows the complete path with exchange rates for each hop
+- **Seamless Execution**: Handles all intermediate swaps automatically in one transaction flow
+- **Success Notifications**: Clear feedback showing exactly what you swapped and received
+
+**How It Works:**
+
+1. **Pathfinding**: The router analyzes all available trading pairs and finds the optimal route using graph algorithms to maximize your output
+2. **Price Discovery**: Each step uses the best available prices from the order book to ensure favorable exchange rates
+3. **Execution**: The swap executes as a series of trades across multiple pairs, automatically handling all intermediate tokens
+
+**Example Use Case:**
+
+Want to swap DAI for WETH but there's no direct DAI/WETH pair?
+
+- The router finds: DAI → USDC → WETH
+- Step 1: Swaps your DAI for USDC at the best DAI/USDC rate
+- Step 2: Automatically swaps the received USDC for WETH at the best USDC/WETH rate
+- You receive WETH in your wallet with optimal pricing
+
+**How to Use:**
+
+1. Navigate to the **Token Swap** page from the header menu
+2. Select your **From** token (e.g., DAI)
+3. Select your **To** token (e.g., WETH)
+4. Enter the amount you want to swap
+5. View the calculated route and expected output
+6. Click **Execute Swap** to approve and complete the transaction
+7. See a success banner with swap details
+
+**Route Visualization:**
+
+The page shows:
+- Complete trading path (e.g., DAI → USDC → WETH)
+- Number of hops required
+- Effective exchange rate (rounded to 2 decimal places)
+- Expected output amount
+
+**Supported Features:**
+
+- Works with all tokens in the DEX (USDT, USDC, DAI, WETH, WBTC, PEPE, EIGEN)
+- Automatically approves tokens before swapping (one-time per token)
+- Shows warnings when no direct pair exists
+- Real-time calculation of routes when amounts change
+- Clear error messages if no route is available
+
+**Access:** Click on **Token Swap** in the navigation header to start swapping tokens with optimal routing.
+
 ## TODOs (DDL: End of Week 12)
 
 ##### Week 9 and Week 10

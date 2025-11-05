@@ -2,6 +2,7 @@
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { FaGithub, FaListAlt, FaStore, FaWallet } from "react-icons/fa";
+import { ArrowRightLeft } from "lucide-react";
 import Image from "next/image";
 import tomori from "../../public/tomori.png";
 import Link from "next/link";
@@ -30,6 +31,13 @@ export default function Header() {
           >
             <FaStore className="h-4 w-4" />
             <span>Market</span>
+          </Link>
+          <Link
+            href="/token-swap"
+            className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors py-2 px-1 text-base font-medium"
+          >
+            <ArrowRightLeft className="h-4 w-4" />
+            <span>Token Swap</span>
           </Link>
           <Link
             href="/orders"
