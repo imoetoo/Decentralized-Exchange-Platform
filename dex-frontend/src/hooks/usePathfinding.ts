@@ -224,8 +224,9 @@ export function usePathfinding(fromToken?: string, toToken?: string) {
           toToken,
           inputAmount,
           snapshots,
-          debug
+          false
         );
+
         setBestPath(path);
 
         // Find alternative paths

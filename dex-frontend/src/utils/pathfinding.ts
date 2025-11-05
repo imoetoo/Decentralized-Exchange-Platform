@@ -103,10 +103,22 @@ export const AVAILABLE_PAIRS: TradingPair[] = [
     quoteSymbol: "USDT",
   },
   {
+    baseToken: USDT_ADDRESS,
+    quoteToken: USDC_ADDRESS,
+    baseSymbol: "USDT",
+    quoteSymbol: "USDC",
+  },
+  {
     baseToken: WETH_ADDRESS,
     quoteToken: USDC_ADDRESS,
     baseSymbol: "WETH",
     quoteSymbol: "USDC",
+  },
+  {
+    baseToken: USDC_ADDRESS,
+    quoteToken: WETH_ADDRESS,
+    baseSymbol: "USDC",
+    quoteSymbol: "WETH",
   },
   {
     baseToken: WBTC_ADDRESS,
@@ -115,10 +127,22 @@ export const AVAILABLE_PAIRS: TradingPair[] = [
     quoteSymbol: "USDT",
   },
   {
+    baseToken: USDT_ADDRESS,
+    quoteToken: WBTC_ADDRESS,
+    baseSymbol: "USDT",
+    quoteSymbol: "WBTC",
+  },
+  {
     baseToken: EIGEN_ADDRESS,
     quoteToken: USDC_ADDRESS,
     baseSymbol: "EIGEN",
     quoteSymbol: "USDC",
+  },
+  {
+    baseToken: USDC_ADDRESS,
+    quoteToken: EIGEN_ADDRESS,
+    baseSymbol: "USDC",
+    quoteSymbol: "EIGEN",
   },
   {
     baseToken: PEPE_ADDRESS,
@@ -127,10 +151,22 @@ export const AVAILABLE_PAIRS: TradingPair[] = [
     quoteSymbol: "USDT",
   },
   {
+    baseToken: USDT_ADDRESS,
+    quoteToken: PEPE_ADDRESS,
+    baseSymbol: "USDT",
+    quoteSymbol: "PEPE",
+  },
+  {
     baseToken: DAI_ADDRESS,
     quoteToken: USDC_ADDRESS,
     baseSymbol: "DAI",
     quoteSymbol: "USDC",
+  },
+  {
+    baseToken: USDC_ADDRESS,
+    quoteToken: DAI_ADDRESS,
+    baseSymbol: "USDC",
+    quoteSymbol: "DAI",
   },
 ];
 
@@ -164,11 +200,14 @@ function buildTokenGraph(
   debug: boolean = false
 ): Map<
   string,
-  Map<string, { price: bigint; liquidity: bigint; direction: "buy" | "sell" }>
+  Map<string, { price: bigint; liquidity: bigint; direction: "buy" | "sell" }[]>
 > {
   const graph = new Map<
     string,
-    Map<string, { price: bigint; liquidity: bigint; direction: "buy" | "sell" }>
+    Map<
+      string,
+      { price: bigint; liquidity: bigint; direction: "buy" | "sell" }[]
+    >
   >();
 
   // Initialize graph with all tokens
@@ -188,11 +227,16 @@ function buildTokenGraph(
     // Edge: base -> quote (we sell base for quote at the buy order price)
     if (bestBuyPrice && buyLiquidity > BigInt(0)) {
       const baseEdges = graph.get(base) || new Map();
-      baseEdges.set(quote, {
+      const existingEdges = baseEdges.get(quote) || [];
+
+      // Add this sell edge
+      existingEdges.push({
         price: bestBuyPrice,
         liquidity: buyLiquidity,
-        direction: "sell", // We sell base to the buy order
+        direction: "sell",
       });
+
+      baseEdges.set(quote, existingEdges);
       graph.set(base, baseEdges);
     }
 
@@ -201,11 +245,16 @@ function buildTokenGraph(
     // Edge: quote -> base (we buy base with quote at the sell order price)
     if (bestSellPrice && sellLiquidity > BigInt(0)) {
       const quoteEdges = graph.get(quote) || new Map();
-      quoteEdges.set(base, {
+      const existingEdges = quoteEdges.get(base) || [];
+
+      // Add this buy edge
+      existingEdges.push({
         price: bestSellPrice,
         liquidity: sellLiquidity,
-        direction: "buy", // We buy base from the sell order
+        direction: "buy",
       });
+
+      quoteEdges.set(base, existingEdges);
       graph.set(quote, quoteEdges);
     }
   });
@@ -295,44 +344,47 @@ export function findBestPath(
       continue;
     }
 
-    neighbors.forEach((edge, neighbor) => {
+    neighbors.forEach((edgeList, neighbor) => {
       if (visited.has(neighbor)) {
         return;
       }
 
       const neighborInfo = getTokenInfo(neighbor);
 
-      // Calculate output from this hop first
-      const nextOutput = calculateOutput(
-        currentOutput,
-        edge.price,
-        edge.direction
-      );
+      // Try each edge (buy and sell directions)
+      edgeList.forEach((edge) => {
+        // Calculate output from this hop first
+        const nextOutput = calculateOutput(
+          currentOutput,
+          edge.price,
+          edge.direction
+        );
 
-      // Check liquidity properly based on direction
-      // For "buy" direction: we're buying the output token, so check if nextOutput <= liquidity
-      // For "sell" direction: we're selling the input token, so check if currentOutput <= liquidity
-      let hasEnoughLiquidity = false;
-      if (edge.direction === "buy") {
-        // We're buying the neighbor token, check if the amount we want to buy is available
-        hasEnoughLiquidity = nextOutput <= edge.liquidity;
-      } else {
-        // We're selling our current token, check if there's enough buy liquidity
-        hasEnoughLiquidity = currentOutput <= edge.liquidity;
-      }
+        // Check liquidity properly based on direction
+        // For "buy" direction: we're buying the output token, so check if nextOutput <= liquidity
+        // For "sell" direction: we're selling the input token, so check if currentOutput <= liquidity
+        let hasEnoughLiquidity = false;
+        if (edge.direction === "buy") {
+          // We're buying the neighbor token, check if the amount we want to buy is available
+          hasEnoughLiquidity = nextOutput <= edge.liquidity;
+        } else {
+          // We're selling our current token, check if there's enough buy liquidity
+          hasEnoughLiquidity = currentOutput <= edge.liquidity;
+        }
 
-      if (!hasEnoughLiquidity) {
-        return; // Skip if not enough liquidity
-      }
+        if (!hasEnoughLiquidity) {
+          return; // Skip if not enough liquidity
+        }
 
-      const currentMaxOutput = maxOutput.get(neighbor)!;
+        const currentMaxOutput = maxOutput.get(neighbor)!;
 
-      // If we found a better path to this neighbor
-      if (nextOutput > currentMaxOutput) {
-        maxOutput.set(neighbor, nextOutput);
-        previous.set(neighbor, { token: current.token, edge });
-        queue.push({ token: neighbor, output: nextOutput });
-      }
+        // If we found a better path to this neighbor
+        if (nextOutput > currentMaxOutput) {
+          maxOutput.set(neighbor, nextOutput);
+          previous.set(neighbor, { token: current.token, edge });
+          queue.push({ token: neighbor, output: nextOutput });
+        }
+      });
     });
   }
 
