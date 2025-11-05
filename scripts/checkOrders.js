@@ -65,7 +65,7 @@ async function main() {
 
           console.log(`Order ID: ${o.id}`);
           console.log(`  Trader : ${o.trader}`);
-          console.log(`  Action : ${o.action === 0 ? "BUY" : "SELL"}`);
+          console.log(`  Action : ${o.action === 0n ? "BUY" : "SELL"}`);
           console.log(`  Amount : ${amt} ${baseMeta.symbol}`);
           console.log(`  Filled : ${fil} ${baseMeta.symbol}`);
           console.log(`  Price  : ${px} ${quoteMeta.symbol} per ${baseMeta.symbol}`);
@@ -88,7 +88,7 @@ async function main() {
 
           console.log(`Order ID: ${o.id}`);
           console.log(`  Trader : ${o.trader}`);
-          console.log(`  Action : ${o.action === 0 ? "BUY" : "SELL"}`);
+          console.log(`  Action : ${Number(o.action) === 0 ? "BUY" : "SELL"}`);
           console.log(`  Amount : ${amt} ${baseMeta.symbol}`);
           console.log(`  Filled : ${fil} ${baseMeta.symbol}`);
           console.log(`  Price  : ${px} ${quoteMeta.symbol} per ${baseMeta.symbol}`);

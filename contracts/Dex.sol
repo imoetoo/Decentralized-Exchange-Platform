@@ -4,8 +4,9 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract Dex is ReentrancyGuard {
+contract Dex is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
     uint256 private constant PRICE_PRECISION = 1e6; // Price precision (e.g., 1 USDC = 1,000,000 microUSDC)
     uint256 public constant MAX_BATCH_LENGTH = 7;
@@ -61,6 +62,7 @@ contract Dex is ReentrancyGuard {
     uint256 public nextOrderId;
     uint256 public feePercent;
     address public feeAccount; // Account that receives fees
+    uint256 public batchExecutorRewardPercent; // Percentage of first token given to batch executor (in bps)
 
     // Events
     event NewOrder(uint256 id, address trader, actionType action, address base, address quote, uint256 amount, uint256 price);
@@ -72,12 +74,49 @@ contract Dex is ReentrancyGuard {
     event StopLimitCancelled(uint256 indexed id);
     event BatchLegFilled(uint256 orderId, uint256 nextOrderId, uint256 baseSold, uint256 quoteReceived);
     event BatchExecuted(uint256[] orderIds, uint256 amountInFirst);
+    event FeeAccountChanged(address indexed oldFeeAccount, address indexed newFeeAccount);
+    event FeePercentChanged(uint256 oldFeePercent, uint256 newFeePercent);
+    event BatchExecutorRewarded(address indexed executor, address token, uint256 reward);
 
-    constructor(address _feeAccount, uint256 _feePercent) {
+    constructor(address _feeAccount, uint256 _feePercent) Ownable(msg.sender) {
         feeAccount = _feeAccount;
         feePercent = _feePercent;
+        batchExecutorRewardPercent = 50; // Default 0.5% of first token to batch executor
         nextOrderId = 1;
         nextStopOrderId = 1;
+    }
+
+    // Admin functions
+    
+    /**
+     * @dev Changes the fee account that receives trading fees
+     * @param newFeeAccount The new fee account address
+     */
+    function setFeeAccount(address newFeeAccount) external onlyOwner {
+        require(newFeeAccount != address(0), "Fee account cannot be zero address");
+        address oldFeeAccount = feeAccount;
+        feeAccount = newFeeAccount;
+        emit FeeAccountChanged(oldFeeAccount, newFeeAccount);
+    }
+    
+    /**
+     * @dev Changes the fee percentage for trades
+     * @param newFeePercent The new fee percentage in basis points (e.g., 100 = 1%)
+     */
+    function setFeePercent(uint256 newFeePercent) external onlyOwner {
+        require(newFeePercent <= 1000, "Fee percent cannot exceed 10%"); // Max 10% fee
+        uint256 oldFeePercent = feePercent;
+        feePercent = newFeePercent;
+        emit FeePercentChanged(oldFeePercent, newFeePercent);
+    }
+    
+    /**
+     * @dev Changes the batch executor reward percentage
+     * @param newRewardPercent The new reward percentage in basis points (e.g., 50 = 0.5%)
+     */
+    function setBatchExecutorRewardPercent(uint256 newRewardPercent) external onlyOwner {
+        require(newRewardPercent <= 500, "Reward percent cannot exceed 5%"); // Max 5% of first token
+        batchExecutorRewardPercent = newRewardPercent;
     }
 
     // Key generation for order pairs
@@ -501,6 +540,7 @@ contract Dex is ReentrancyGuard {
 
     function _executeSwaps(uint256[] calldata orderIds, uint256[] memory inAmounts, uint256[] memory outAmounts) internal {
         uint256 n = orderIds.length;
+        address batchExecutor = msg.sender;
 
         for (uint256 i = 0; i < n; ) {
             uint256 id = orderIds[i];
@@ -510,10 +550,25 @@ contract Dex is ReentrancyGuard {
             uint256 prev = (i + n - 1) % n;
             address receiver = orders[orderIds[prev]].trader;
 
-            // Send the locked base to the previous order's trader
-            IERC20(oi.base).safeTransfer(receiver, inAmounts[i]);
+            uint256 transferAmount = inAmounts[i];
+            
+            // For the first order, deduct batch executor reward
+            if (i == 0 && batchExecutorRewardPercent > 0) {
+                uint256 executorReward = (inAmounts[i] * batchExecutorRewardPercent) / 10000;
+                if (executorReward > 0) {
+                    // Send reward to batch executor
+                    IERC20(oi.base).safeTransfer(batchExecutor, executorReward);
+                    emit BatchExecutorRewarded(batchExecutor, oi.base, executorReward);
+                    
+                    // Reduce the amount sent to the receiver
+                    transferAmount = inAmounts[i] - executorReward;
+                }
+            }
 
-            // Update filled amount
+            // Send the (remaining) locked base to the previous order's trader
+            IERC20(oi.base).safeTransfer(receiver, transferAmount);
+
+            // Update filled amount (with original amount, not reduced amount)
             oi.filled += inAmounts[i];
             require(oi.filled <= oi.amount, "batch: overfill");
             emit BatchLegFilled(id, orderIds[(i + 1) % n], inAmounts[i], outAmounts[i]);
