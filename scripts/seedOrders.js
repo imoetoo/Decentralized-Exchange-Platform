@@ -27,14 +27,14 @@ async function main() {
   console.log("Deployed contracts:", { MockUSDT, MockUSDC, MockWETH, MockDAI, Dex });
 
   // Check balances before
-  console.log("\n📊 Initial balances:");
+  console.log("\nInitial balances:");
   console.log("Alice USDT:", ethers.formatUnits(await usdt.balanceOf(alice.address), 6));
   console.log("Alice USDC:", ethers.formatUnits(await usdc.balanceOf(alice.address), 6));
   console.log("Bob   WETH:", ethers.formatUnits(await weth.balanceOf(bob.address), 6));
   console.log("Charlie DAI:", ethers.formatUnits(await dai.balanceOf(charlie.address), 6));
   
   // Approve DEX to spend all tokens for all users
-  console.log("\n🔓 Approving token transfers...");
+  console.log("\nApproving token transfers...");
   const tokens = [usdt, usdc, weth, dai];
   const users = [alice, bob, charlie];
   
@@ -43,7 +43,7 @@ async function main() {
       await (await token.connect(user).approve(dexAddr, ethers.MaxUint256)).wait();
     }
   }
-  console.log("✅ All approvals complete");
+  console.log("All approvals complete");
 
   console.log("\n🔄 Creating profitable cycle orders...");
   
@@ -59,7 +59,7 @@ async function main() {
     ethers.parseUnits("1000", 6), // amount
     ethers.parseUnits("0.98", 6)  // price: 1 USDC = 0.98 USDT
   )).wait();
-  console.log("  ✅ Order 1: Alice sells USDC → USDT @ 0.98");
+  console.log("  Order 1: Alice sells USDC → USDT @ 0.98");
   
   // Order 2: Bob sells 980 USDT for WETH at rate 0.0005 (USDT/WETH rate)
   await (await dex.connect(bob).placeLimit(
@@ -69,7 +69,7 @@ async function main() {
     ethers.parseUnits("980", 6), // amount
     ethers.parseUnits("0.0005", 6) // price: 1 USDT = 0.0005 WETH
   )).wait();
-  console.log("  ✅ Order 2: Bob sells USDT → WETH @ 0.0005");
+  console.log("  Order 2: Bob sells USDT → WETH @ 0.0005");
   
   // Order 3: Charlie sells 0.49 WETH for USDC at rate 2100 (WETH is expensive)
   await (await dex.connect(charlie).placeLimit(
@@ -79,9 +79,9 @@ async function main() {
     ethers.parseUnits("0.49", 6), // amount
     ethers.parseUnits("2100", 6) // price: 1 WETH = 2100 USDC
   )).wait();
-  console.log("  ✅ Order 3: Charlie sells WETH → USDC @ 2100");
+  console.log("  Order 3: Charlie sells WETH → USDC @ 2100");
 
-  console.log("\n💰 Cycle 1 Profitability Check:");
+  console.log("\nCycle 1 Profitability Check:");
   console.log("  Start: 1000 USDC");
   console.log("  → 1000 * 0.98 = 980 USDT");  
   console.log("  → 980 * 0.0005 = 0.49 WETH");
@@ -99,7 +99,7 @@ async function main() {
     ethers.parseUnits("500", 6), // amount  
     ethers.parseUnits("1.01", 6) // price: 1 USDT = 1.01 DAI
   )).wait();
-  console.log("  ✅ Order 4: Alice sells USDT → DAI @ 1.01");
+  console.log("  Order 4: Alice sells USDT → DAI @ 1.01");
   
   // Order 5: Bob sells 505 DAI for USDC at rate 0.99
   await (await dex.connect(bob).placeLimit(
@@ -109,7 +109,7 @@ async function main() {
     ethers.parseUnits("505", 6), // amount
     ethers.parseUnits("0.99", 6) // price: 1 DAI = 0.99 USDC
   )).wait();
-  console.log("  ✅ Order 5: Bob sells DAI → USDC @ 0.99");
+  console.log("  Order 5: Bob sells DAI → USDC @ 0.99");
   
   // Order 6: Charlie sells 499.95 USDC for USDT at rate 1.005
   await (await dex.connect(charlie).placeLimit(
@@ -119,9 +119,9 @@ async function main() {
     ethers.parseUnits("499.95", 6), // amount
     ethers.parseUnits("1.005", 6)   // price: 1 USDC = 1.005 USDT
   )).wait();
-  console.log("  ✅ Order 6: Charlie sells USDC → USDT @ 1.005");
+  console.log("  Order 6: Charlie sells USDC → USDT @ 1.005");
 
-  console.log("\n💰 Cycle 2 Profitability Check:");
+  console.log("\nCycle 2 Profitability Check:");
   console.log("  Start: 500 USDT");
   console.log("  → 500 * 1.01 = 505 DAI");
   console.log("  → 505 * 0.99 = 499.95 USDC");  
@@ -158,7 +158,7 @@ async function main() {
     }
   }
 
-  console.log("\n🎯 Cycles Created:");
+  console.log("\nCycles Created:");
   console.log("  Cycle 1: Orders [1, 2, 3] - USDC → USDT → WETH → USDC");
   console.log("  Cycle 2: Orders [4, 5, 6] - USDT → DAI → USDC → USDT");
   console.log("\n🤖 Ready for batch solver execution!");

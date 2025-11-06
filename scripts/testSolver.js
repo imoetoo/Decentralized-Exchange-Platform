@@ -2,7 +2,7 @@ const { ethers } = require("hardhat");
 const fs = require('fs');
 
 async function testSolverLogic() {
-    console.log("🧪 Testing Batch Solver Logic...");
+    console.log("Testing Batch Solver Logic...");
     
     // Load deployment addresses
     const deploymentsPath = './ignition/deployments/chain-31337/deployed_addresses.json';
@@ -23,7 +23,7 @@ async function testSolverLogic() {
     const Dex = await ethers.getContractFactory("Dex");
     const dex = Dex.attach(dexAddress);
     
-    console.log("📋 Checking current orders...");
+    console.log("Checking current orders...");
     
     // Get some orders to analyze
     const orderCount = await dex.nextOrderId();
@@ -51,18 +51,18 @@ async function testSolverLogic() {
                     price: order.price,
                     remaining: order.amount - order.filled
                 });
-                console.log(`  ✅ Added SELL order ${i} to analysis`);
+                console.log(`  Added SELL order ${i} to analysis`);
             } else if (order.active && Number(order.action) === 0) {
-                console.log(`  ℹ️  Skipping BUY order ${i}`);
+                console.log(`  Skipping BUY order ${i}`);
             } else if (!order.active) {
-                console.log(`  ❌ Order ${i} is inactive`);
+                console.log(`  Order ${i} is inactive`);
             }
         } catch (error) {
-            console.log(`  ⚠️  Order ${i} doesn't exist`);
+            console.log(`  Warning: Order ${i} doesn't exist`);
         }
     }
     
-    console.log(`\n📊 Found ${activeOrders.length} active SELL orders:`);
+    console.log(`\nFound ${activeOrders.length} active SELL orders:`);
     
     activeOrders.forEach(order => {
         const baseSymbol = tokenMap[order.base] || order.base.slice(0,8) + '...';
@@ -76,19 +76,19 @@ async function testSolverLogic() {
     });
     
     // Simple cycle detection
-    console.log("🔄 Looking for potential cycles...");
+    console.log("Looking for potential cycles...");
     
     const cycles = findSimpleCycles(activeOrders, 3); // Look for 3-order cycles
     
     if (cycles.length > 0) {
-        console.log(`\n✅ Found ${cycles.length} unique cycle(s):`);
+    console.log(`\nFound ${cycles.length} unique cycle(s):`);
         
         cycles.forEach((cycle, index) => {
             console.log(`\nCycle ${index + 1}:`);
             
             // Validate and show the cycle path
             let isValid = true;
-            for (let i = 0; i < cycle.length; i++) {
+                for (let i = 0; i < cycle.length; i++) {
                 const currentOrder = cycle[i];
                 const nextOrder = cycle[(i + 1) % cycle.length];
                 
@@ -100,26 +100,26 @@ async function testSolverLogic() {
                 
                 // Check if current order's quote matches next order's base
                 if (currentOrder.quote.toLowerCase() !== nextOrder.base.toLowerCase()) {
-                    console.log(`     ❌ ERROR: Quote token doesn't match next order's base!`);
+                    console.log(`     ERROR: Quote token doesn't match next order's base!`);
                     isValid = false;
                 }
             }
             
-            if (isValid) {
+                if (isValid) {
                 // Quick profitability check
                 const profitability = calculateSimpleProfitability(cycle);
-                console.log(`     💰 Estimated profit ratio: ${profitability.toFixed(6)} (${profitability > 1 ? 'PROFITABLE' : 'NOT PROFITABLE'})`);
+                console.log(`     Estimated profit ratio: ${profitability.toFixed(6)} (${profitability > 1 ? 'PROFITABLE' : 'NOT PROFITABLE'})`);
                 
                 // Show the actual token flow
                 const tokenFlow = cycle.map(o => tokenMap[o.base] || o.base.slice(-4)).join(' → ');
                 const firstToken = tokenMap[cycle[0].base] || cycle[0].base.slice(-4);
-                console.log(`     🔄 Token flow: ${tokenFlow} → ${firstToken}`);
+                console.log(`     Token flow: ${tokenFlow} → ${firstToken}`);
             } else {
-                console.log(`     ❌ Invalid cycle detected!`);
+                console.log(`     Invalid cycle detected!`);
             }
         });
     } else {
-        console.log("❌ No cycles found with current orders");
+        console.log("No cycles found with current orders");
         
         // Show what tokens we have
         const baseTokens = [...new Set(activeOrders.map(o => o.base))];
@@ -128,7 +128,7 @@ async function testSolverLogic() {
         console.log(`\nAvailable base tokens: ${baseTokens.length}`);
         console.log(`Available quote tokens: ${quoteTokens.length}`);
         
-        console.log("\n💡 To create cycles, you need orders like:");
+        console.log("\nTo create cycles, you need orders like:");
         console.log("   Order A: TokenX → TokenY");
         console.log("   Order B: TokenY → TokenZ"); 
         console.log("   Order C: TokenZ → TokenX");

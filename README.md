@@ -1,37 +1,94 @@
-# 1. To start
+# SC4053 Blockchain Technology Development Project <br> <br> ----------------------------------------- <br> | Option 1: Decentralized Exchanges | <br> ----------------------------------------- 
 
-To start the project, we will need to set up both `1.1 Backend` (blockchain network and smart contracts) and `1.2 Frontend` (user interface). We will cover how to connect the frontend to the backend in `1.3 Configure Frontend to connect to Local Blockchain`.
+## 1. Introduction
+
+TBD
+
+## 2. Features
+
+### 2.1 Portfolio Page
+
+The portfolio page provides a comprehensive view of your token holdings with real-time pricing:
+
+**Features:**
+
+- **Total Assets Display**: Shows the total value of all your tokens in USD at the top of the page
+- **Token Balance List**: Displays all tokens in your wallet with their balances
+- **Real-Time USD Valuation**: Each token shows its USD value based on the highest bid price from the order book
+- **Token Icons**: Visual representation of each token with custom images
+- **Automatic Price Updates**: Prices are fetched from the DEX order book every 10 seconds
+- **Multi-Pair Support**: Supports pricing from both direct (TOKEN/USDC, TOKEN/USDT) and inverse (USDC/TOKEN, USDT/TOKEN) trading pairs
+
+**How to Access:**
+
+1. Connect your wallet to the DEX frontend
+2. Navigate to the "Portfolio" page from the header menu
+3. View your token balances and total asset value in USD
+
+**Price Calculation:**
+
+- Prices are determined by the highest buy order (best bid) in the order book
+- For tokens with inverse pairs (e.g., USDT/WBTC), the price is automatically inverted
+- USDC and USDT are treated as $1.00 stablecoins
+
+### 2.2 Trading Pair Swap
+
+Quickly switch between trading perspectives for any token pair:
+
+**Features:**
+
+- **One-Click Swap**: Click the swap icon in the market header to instantly reverse the trading pair
+- **Automatic Redirection**: Swaps between TOKEN1/TOKEN2 ↔ TOKEN2/TOKEN1
+- **Maintains Context**: Keeps you on the same tokens, just switches base and quote
+- **Order Book Inversion**: The order book updates to show the opposite perspective
+
+**Example Use Cases:**
+
+- View WBTC/USDT to see how much USDT you need to buy WBTC
+- Swap to USDT/WBTC to see how much WBTC you can get for your USDT
+- Compare liquidity and prices from both perspectives
+
+**How to Use:**
+
+1. Navigate to any trading pair (e.g., WBTC/USDT)
+2. Click the swap icon (↔) in the market header
+3. The page will reload with the inverse pair (USDT/WBTC)
+
+
+## 3. Getting Started: Local Deployment
+
+To start the project, we will need to set up both `3.1 Backend` (local blockchain network and smart contracts) and `3.2 Frontend` (user interface). We will cover how to connect the frontend to the backend in `3.3 Configure Frontend to connect to Local Blockchain`.
 
 Install the following if you haven't already:
 
 - [Node.js and npm](https://nodejs.org/en/download/) (npm is included with Node.js)
 - [Git](https://git-scm.com/downloads)
 
-For steps that needs to be run only once, they will be marked as `One-time setup step.`
+For steps that needs to be run only once, they will be marked as \<One-time setup step\>.
 
-## 1.1 Backend
+### 3.1 Backend
 
 Two terminals will be needed.
 
-- Terminal 1: The Blockchain
+- Terminal 1: The Local Blockchain
 
   - "Server" that runs the blockchain network and processes transactions
   - Outputs every transaction sent to the blockchain network
   - Must stay open
 
 - Terminal 2: The client
-  - Send commands to the blockchain network (e.g., deploy smart contracts, mint tokens)
+  - Send commands to the blockchain network (e.g., deploy smart contracts, mint tokens) in the form of js scripts
   - Can be closed after commands are executed and open as needed
 
-We will proceed to set up terminal 1 first followed by terminal 2.
+We will proceed to set up Terminal 1 first followed by Terminal 2.
 
-### Terminal 1: The Blockchain
+#### Terminal 1: The Local Blockchain
 
-1. Navigate to the root folder (`SC4053-Project`) - if not already there.
+1. Navigate to the root folder (`SC4053-Project`) if you haven't do so.
 
 2. Run `npm install` - This installs all the necessary dependencies for the project from `package.json`.
 
-   - One-time setup step.
+   - \<One-time setup step\>
    - One important dependency is `hardhat` - a development tool for Ethereum to run fake blockchains on personal computers for testing, compile and deploy smart contracts to compile, and test without spending real money. `ignition` is a plugin for Hardhat that simplifies contract deployment and management.
 
 3. Run `npx hardhat node` - This creates a private Ethereum blockchain locally for testing purposes.
@@ -60,18 +117,21 @@ We will proceed to set up terminal 1 first followed by terminal 2.
    ```
 
 We have now set up the blockchain network! <br>
-We will now set up terminal 2: The Client. Remenber to open a new terminal window and keep terminal 1 running!
+We will now set up Terminal 2: The Client. Remenber to open a new terminal window and keep Terminal 1 running!
 
-### Terminal 2: The Client
+#### Terminal 2: The Client
 
 The smart contracts we will be deploying are in the `contracts` folder.
 
-- `Token.sol` - A mock token contract that simulates various tokens like USDC, USDT, WETH, WBTC, etc. The smart contract manages the minting and transferring of these mock tokens.
-- `Dex.sol` - The key section of our project.
+- `Token.sol` - A mock token contract that simulates various tokens like USDC, USDT, DAI, PEPE, WBTC, WETH, and EIGEN. The smart contract defines the functions for minting and transferring these mock tokens.
 
-Let's deploy the smart contracts to the local blockchain network.
+- `Dex.sol` - The key section of our project. It supports functionalities such as placing limit orders, cancelling orders, and executing trades between different token pairs.
 
-4. Run `npx hardhat ignition deploy ignition/modules/Token.js --network localhost` - This compiles `contracts/Token.sol` and deploys it to the local blockchain network, creating multiple mock tokens: USDT, USDC, DAI, WETH, WBTC, PEPE, and EIGEN.
+Let's deploy the smart contracts to the local blockchain network! 
+
+4. Run `npx hardhat ignition deploy ignition/modules/Token.js --network localhost` - This compiles `contracts/Token.sol` and deploys it to the local blockchain network, creating multiple mock tokens.
+
+   Alternatively, you can run the shortcut `npm run deploy:mock`. This shortcut is defined in `package.json`.
 
    - Hardhat reads `Token.sol` and compiles Solidity code into bytecode and ABI (Application Binary Interface). They are stored in `artifacts` folder.
    - Information on how the contracts should be deployed is defined in `ignition/modules/Token.js`. In this file, we specify that multiple instances of `Token` should be deployed with different names and symbols.
@@ -109,6 +169,8 @@ Let's deploy the smart contracts to the local blockchain network.
 
 5. Run `npx hardhat ignition deploy ignition/modules/Dex.js --network localhost` - This compiles `contracts/Dex.sol` and deploys it to the local blockchain network.
 
+   Alternatively, you can run the shortcut `npm run deploy:dex`, which is also defined in `package.json`.
+
    - Similar to step 4, Hardhat reads `Dex.sol`, compiles it, and deploys it to the local blockchain network according to the rules defined in `ignition/modules/Dex.js`. The address is also saved to `deployed_addresses.json`.
 
    Example output (Terminal 1):
@@ -130,51 +192,99 @@ Let's deploy the smart contracts to the local blockchain network.
    DexModule#Dex - 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
    ```
 
-We have successfully deployed the smart contracts to the local blockchain network. <br>
-Now, let's test the contracts by minting some tokens to two test accounts (Alice and Bob). Minting is the process of creating new tokens out of thin air (ie. printing money) and assigning them to an account.
+We have successfully deployed the smart contracts to the local blockchain network! <br>
 
-6. Run `npx hardhat run scripts/mintTokensToAccount.js --network localhost` - This mints mock tokens (USDT, USDC, DAI, WETH, WBTC, PEPE, EIGEN) to test accounts (Alice, Bob, and Carol).
+To simplify the above 2 steps, we can instead run the shortcut `npm run deploy:all`, which calls the script `ignition/deployAll.js`. This script will first clean previous deployments and then compiles and deploy both the Token and Dex modules in sequence. It will then copy the deployment addresses to the frontend directory, which will be useful when configuring the frontend later.
 
-   - The script retrieves the deployed contract addresses from `deployed_addresses.json`.
-   - Address #0 sends transactions to the Token contracts to mint tokens to Address #1 (Alice), Address #2 (Bob), and Address #3 (Carol).
 
-   Example output (Terminal 1):
+Now, let's populate the DEX with some fake data to simulate real trading activities. This is termed "seeding" the DEX.
 
-   - `From` field is Address #0, who creates the transactions
-   - `To` field are the mock token contract addresses
-   - `Contract call` field shows the `mint` function is called
+6. Run `hardhat run --network localhost scripts/seedOrderBook.js` or the shortcut `npm run seedOrder`.    
+   - It reads deployed contract addresses of DEX and token contracts from `iginition/deployment/chain-31337/deployed_addresses.json`.
+   - We use account 15–19 from Hardhat as test accounts (traders) to place orders. For each account, we allocate substantial amount of tokens of each type so that they have sufficient balances to place orders. This is termed "minting" tokens to the traders.
+   - Each trader approves the DEX contract to spend their tokens on their behalf.
+   - We create 12 trading pairs (6 base pairs + 6 reverse pairs) with realistic prices and amounts.
+      - Base pairs: WETH/USDC, WBTC/USDT, EIGEN/USDC, PEPE/USDT, DAI/USDC, USDC/USDT
+      - Reverse pairs: USDC/WETH, USDT/WBTC, USDC/EIGEN, USDT/PEPE, USDC/DAI, USDT/USDC
+   - For each trading pair, we place 10 limit orders (5 buy orders + 5 sell orders) with prices and amounts that simulate a real order book. 
+      - Prices are set such that there are no intersecting orders (i.e., no immediate fills).
+      - Buy orders are placed below the mid price and sell orders above the mid price to create a realistic market spread.
 
+   Example Output (Terminal 2):
    ```bash
-   eth_sendTransaction
-       Contract call:       Token#mint
-       Transaction:         0x4dbb88e2a158622982113c79772c526c6358cc8f56fdea90d2304ef50a055d82
-       From:                0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266
-       To:                  0xe7f1725e7734ce288f8367e1bb143e90bb3f0512
-       Value:               0 ETH
-       Gas used:            51297 of 30000000
-       Block #4:            0xa2148c09b0c9ef77679c1ccca23edcea6e9325ce90704181d4f5db6932936678
+   [dotenv@17.2.3] injecting env (0) from .env -- tip: 🗂️ backup and recover secrets: <https://dotenvx.com/ops>
+   [dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: <https://dotenvx.com/ops>
+   🚀 Starting Order Book Seeding...
 
-   eth_sendTransaction
-       Contract call:       Token#mint
-       Transaction:         0x0c4ee2a3c3f52ff9bf48cda1e2c8e0cf2f42f44a85a0c6c2e97b5d1b9cfcc9ac
-       From:                0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266
-       To:                  0x5fbdb2315678afecb367f032d93f642f64180aa3
-       Value:               0 ETH
-       Gas used:            51297 of 30000000
-       Block #5:            0x584094e27ca010d3d452c247cbd0ccb19bce7734c2b3f23cef8bbd5db364ebb5
+   Traders:
+   [0] 0xcd3B766CCDd6AE721141F452C550Ca635964ce71
+   [1] 0x2546BcD3c84621e976D8185a91A922aE77ECEc30
+   [2] 0xbDA5747bFD65F08deb54cb465eB87D40e51B197E
+   [3] 0xdD2FD4581271e230360230F9337D5c0430Bf44C0
+   [4] 0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199
 
+   💰 Minting tokens to traders...
+   ✅ Tokens minted
+
+   🔓 Approving DEX for all traders...
+   ✅ Approvals complete
+
+   📊 Creating order books...
+
+   🔷 WETH/USDC Order Book
+   BUY 1 WETH @ 3920 [ID: 1]
    ...
+
+   🟡 WBTC/USDT Order Book
+   BUY 0.1 WBTC @ 118800 [ID: 11]
+   ...
+
+   🟣 EIGEN/USDC Order Book
+   BUY 500 EIGEN @ 1.064 [ID: 21]
+   ...
+
+   🐸 PEPE/USDT Order Book
+   BUY 100 PEPE @ 0.0000069 USDT [ID: 31]
+   ...
+
+   💚 DAI/USDC Order Book
+   BUY 1000 DAI @ 0.998 [ID: 41]
+   ...
+
+   💵 USDC/USDT Order Book
+   BUY 1000 USDC @ 0.9995 [ID: 51]
+   ...
+
+   💵 USDT/USDC Order Book
+   BUY 1000 USDT @ 0.9995 [ID: 61]
+   ...
+
+   🔷 USDC/WETH Order Book (Reverse)
+   BUY 4000 USDC @ 0.000245 WETH each [ID: 71]
+   ...
+
+   ... (similar output for other reverse pairs) ...
+
+   ✅ Order book seeding complete!
+
+   📊 Summary:
+
+   - 12 trading pairs populated (6 base pairs + 6 reverse pairs)
+
+   ✅ Order Book Seeding Complete!
+
+   - Total: 120 orders created
+   - All orders non-intersecting (no immediate fills)
+   - Realistic market spreads maintained
+
+   🎯 Trading pairs ready:
+   Base pairs:
+      - WETH/USDC (~$4,000)
+      ...
+   Reverse pairs:
+      - USDC/WETH
+      ...
    ```
-
-To Summarise the block numbers:
-
-1. Block #1: Contract deployment (USDC)
-2. Block #2: Contract deployment (USDT)
-3. Block #3: Contract deployment (DEX)
-4. Block #4: Mint USDT to Alice
-5. Block #5: Mint USDC to Alice
-6. Block #6: Mint USDT to Bob
-7. Block #7: Mint USDC to Bob
 
 Let's review the purpose of each folder in the repository:
 
@@ -186,13 +296,12 @@ SC4053-Project/
 ├── contracts/           ← 📝 Smart contracts source codes (Solidity)
 ├── dex-frontend/        ← 🌐 User interface (Next.js)
 ├── ignition/            ← 🚀 Define how contracts are deployed and track current deployments
-|    ├── deployments/     ← 📂 Track deployed contract addresses
-|    └── modules/         ← 📄 Define how each contract is deployed
-├── scripts/             ← 🔧 Interact with deployed contracts
-└── test/                ← 🧪 Automated unit tests for contracts (TBD)
+|    ├── deployments/    ← 📂 Track deployed contract addresses
+|    └── modules/        ← 📄 Define how each contract is deployed
+└── scripts/             ← 🔧 Interact with deployed contracts
 ```
 
-## 1.2 Frontend
+### 3.2 Frontend
 
 A third terminal will be needed.
 
@@ -206,7 +315,7 @@ We will now set up the frontend to interact with the smart contracts deployed on
 
 2. Run `New-Item .env.local` - This creates a new environment variable file `.env.local` in the `dex-frontend` folder. Alternatively, you can create the file manually using a text editor.
 
-   - One-time setup step.
+   - \<One-time setup step\>
 
 3. Open `.env.local` and add WalletConnect project ID:
 
@@ -216,11 +325,11 @@ We will now set up the frontend to interact with the smart contracts deployed on
 
    Replace `//` with your own WalletConnect project ID. You can create a free account and get a project ID at <https://cloud.walletconnect.com/>. Make sure there are no spaces before or after the `=` sign.
 
-   - One-time setup step.
+   - \<One-time setup step\>
 
 4. Run `npm install` - This installs all the necessary dependencies for the frontend from `package.json`.
 
-   - One-time setup step.
+   - \<One-time setup step\>
    - One important dependency is `next` - a React framework that enables functionality such as server-side rendering and generating static websites for React based web applications.
 
 5. Run `npm run dev` - This starts the Next.js development server.
@@ -249,7 +358,7 @@ We will now set up the frontend to interact with the smart contracts deployed on
 
 6. Open your web browser and navigate to <http://localhost:3000> - This opens the frontend interface of the DEX application.
 
-## 1.3 Configure Frontend to connect to Local Blockchain
+### 3.3 Configure Frontend to connect to Local Blockchain
 
 Before we begin, let's clarify on some terminologies / concepts that we will be using:
 
@@ -262,7 +371,7 @@ Before we begin, let's clarify on some terminologies / concepts that we will be 
 - <b>WalletConnect</b> <br>
   An open-source protocol for websites to connect to multiple types of wallets, not just MetaMask.
 
-To begin, ensure that you have MetaMask installed as a browser extension. You can download it from <https://metamask.io/download.html>.
+In this tutorial, we will be using MetaMask as our Ethereum wallet to connect to the local blockchain network and interact with the DEX frontend. Ensure that you have MetaMask installed as a browser extension. You can download it from <https://metamask.io/download.html>.
 
 1. Open Metamask, click on the network dropdown at the top, and select "Add Network" -> "Add Network manually". Enter the following details to add the local blockchain network:
 
@@ -275,213 +384,15 @@ To begin, ensure that you have MetaMask installed as a browser extension. You ca
 
    Click "Save" to add the network. You can safely ignore any warnings.
 
-2. Import test accounts (Alice and Bob) into MetaMask using their private keys displayed in Terminal 1 when you started the local blockchain network.
+2. Import test accounts (account 15 to 19) of your choice into MetaMask using their private keys displayed in Terminal 1 when you started the local blockchain network.
 
    - Click on the account icon at the top right corner of MetaMask and select "Import Account".
-   - Paste the private key of Address #1 (Alice) and click "Import". Repeat for Address #2 (Bob).
+   - Paste the private key of the account you want to import and click "Import".
 
-   Example private keys from Terminal 1:
 
-   ```
-   Account #0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (10000 ETH)
-   Private Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-
-   Account #1: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 (10000 ETH)
-   Private Key: 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
-
-   Account #2: 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC (10000 ETH)
-   Private Key: 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a
-   ```
-
-3. Add MockUSDC and MockUSDT tokens to MetaMask for both Alice and Bob. For each account, click on "Import tokens", switch tab to "Custom Token", select "Hardhat Local" network, and enter the addresses for USDT and USDC as displayed in Terminal 2 when you deployed the mock stablecoin contracts.
-
-   Example addresses from Terminal 2:
-
-   ```
-   Deploying [ TokensModule ]
-
-   Batch #1
-   Executed TokensModule#MockUSDC
-   Executed TokensModule#MockUSDT
-   Executed TokensModule#MockDAI
-   Executed TokensModule#MockWETH
-   Executed TokensModule#MockWBTC
-   Executed TokensModule#MockPEPE
-   Executed TokensModule#MockEIGEN
-
-   [ TokensModule ] successfully deployed 🚀
-
-   Deployed Addresses
-
-   TokensModule#MockUSDC - 0x5FbDB2315678afecb367f032d93F642f64180aa3
-   TokensModule#MockUSDT - 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
-   TokensModule#MockDAI - 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
-   TokensModule#MockWETH - 0x9A676e781A523b5d0C0e43731313A708CB607508
-   TokensModule#MockWBTC - 0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82
-   TokensModule#MockPEPE - 0x610178dA211FEF7D417bC0e6FeD39F05609AD788
-   TokensModule#MockEIGEN - 0x8A791620dd6260079BF849Dc5567aDC3F2FdC318
-   ```
+3. For each account, add the mock tokens that you wish to see. Click on "Import tokens", switch tab to "Custom Token", select "Hardhat Local" network, and enter the addresses for the mock tokens deployed earlier (you can find them in `ignition/deployments/chain-31337/deployed_addresses.json` or under Terminal 2).
 
 4. Navigate to top left corner of https://localhost:3000 and connect your MetaMask wallet to the frontend.
 
-<br>
 
-# 2. Notes
 
-**There will be two `package.json` and two `package-lock.json`**
-
-**⚠️ Do not commit changes to `package.json` or `package-lock.json` if you haven't intentionally added, removed, or updated any dependencies.**
-
-**(Small difference is possible, due to different version npm, name of local root folders and so on...)**
-
-## Testing (seedOrders.js)
-
-```bash
-# In your terminal under the root folder (SC4053-Project)
-
-# As I added new dependencies so need to update
-npm install
-# Start the local blockchain host -port 6666
-npm run node
-# Mock coin deployment
-npm run deploy:mock
-# Dex contract deployment
-npm run deploy:dex
-# Then you will find the contracts and coins address under ./ignition/deployments/deployed_addresses.json
-# I have written a ./scripts/address.js so it should automatic capture the address
-# If works ok no need to manually inpu address
-
-# GIVE USDC AND USDT to alice and bob; ether.getSigners() function is used to get the info for alice and bob
-# First two auto generated accounts using "npm run node"
-npm run mint
-
-# Run the testing file
-npm run seed
-```
-
-## Seeding the Order Book (seedOrderBook.js)
-
-To populate the order book with realistic trading data for testing and development:
-
-```bash
-# In your terminal under the root folder (SC4053-Project)
-npm run seedOrder
-```
-
-This script will:
-
-- Create buy and sell orders for multiple trading pairs (WBTC/USDT, USDT/WBTC, WETH/USDC, etc.)
-- Generate orders with varying prices and amounts to simulate a real order book
-- Automatically approve tokens and place limit orders using test accounts
-- Display the order book state after seeding
-
-**Note:** Make sure the local blockchain is running (`npm run node`) and contracts are deployed before running this script.
-
----
-
-# 3. New Features
-
-## 3.1 Portfolio Page
-
-The portfolio page provides a comprehensive view of your token holdings with real-time pricing:
-
-**Features:**
-
-- **Total Assets Display**: Shows the total value of all your tokens in USD at the top of the page
-- **Token Balance List**: Displays all tokens in your wallet with their balances
-- **Real-Time USD Valuation**: Each token shows its USD value based on the highest bid price from the order book
-- **Token Icons**: Visual representation of each token with custom images
-- **Automatic Price Updates**: Prices are fetched from the DEX order book every 10 seconds
-- **Multi-Pair Support**: Supports pricing from both direct (TOKEN/USDC, TOKEN/USDT) and inverse (USDC/TOKEN, USDT/TOKEN) trading pairs
-
-**How to Access:**
-
-1. Connect your wallet to the DEX frontend
-2. Navigate to the "Portfolio" page from the header menu
-3. View your token balances and total asset value in USD
-
-**Price Calculation:**
-
-- Prices are determined by the highest buy order (best bid) in the order book
-- For tokens with inverse pairs (e.g., USDT/WBTC), the price is automatically inverted
-- USDC and USDT are treated as $1.00 stablecoins
-
-## 3.2 Trading Pair Swap
-
-Quickly switch between trading perspectives for any token pair:
-
-**Features:**
-
-- **One-Click Swap**: Click the swap icon in the market header to instantly reverse the trading pair
-- **Automatic Redirection**: Swaps between TOKEN1/TOKEN2 ↔ TOKEN2/TOKEN1
-- **Maintains Context**: Keeps you on the same tokens, just switches base and quote
-- **Order Book Inversion**: The order book updates to show the opposite perspective
-
-**Example Use Cases:**
-
-- View WBTC/USDT to see how much USDT you need to buy WBTC
-- Swap to USDT/WBTC to see how much WBTC you can get for your USDT
-- Compare liquidity and prices from both perspectives
-
-**How to Use:**
-
-1. Navigate to any trading pair (e.g., WBTC/USDT)
-2. Click the swap icon (↔) in the market header
-3. The page will reload with the inverse pair (USDT/WBTC)
-
-## 3.3 Order Book Seeding Script
-
-The `seedOrderBook.js` script automates the creation of realistic market data for development and testing:
-
-**Features:**
-
-- **Multiple Trading Pairs**: Seeds orders for WBTC, WETH, DAI, PEPE, and EIGEN against USDT/USDC
-- **Realistic Price Ranges**: Creates orders with market-appropriate pricing
-- **Both Sides of the Book**: Generates buy and sell orders for each pair
-- **Token Approval Handling**: Automatically approves tokens before placing orders
-- **Progress Reporting**: Shows which orders are being placed and their status
-
-**How to Run:**
-
-```bash
-npm run seedOrder
-```
-
-**What it Does:**
-
-1. Connects to the local blockchain network
-2. Retrieves deployed contract addresses
-3. Mints tokens to test accounts if needed
-4. Approves DEX contract to spend tokens
-5. Places limit orders across multiple trading pairs
-6. Reports success/failure for each order
-
-**Trading Pairs Created:**
-
-- WBTC/USDT
-- USDT/WBTC
-- WETH/USDC
-- DAI/USDC
-- PEPE/USDT
-- EIGEN/USDC
-
-**Configuration:**
-The script can be customized by editing `/scripts/seedOrderBook.js`:
-
-- Adjust price ranges for each token
-- Modify order amounts
-- Add or remove trading pairs
-- Change the number of orders per pair
-
-## TODOs (DDL: End of Week 12)
-
-##### Week 9 and Week 10
-
-1. 2 Bonus parts in the project description (Bonus 1 cancelation is done, left Bonus 2 and Bonus 3)
-2. Deploy on the Ethereum Testnets (Now localhost only)
-3. Front-end
-
-##### Week 10 and Week 11
-
-1. Demo video
-2. Testing and fixing bugs and modifcations on backend and frontend if needed

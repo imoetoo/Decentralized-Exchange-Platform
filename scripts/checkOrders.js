@@ -101,7 +101,7 @@ async function main() {
     }
   }
 
-  console.log("\n✅ Done.\n");
+  console.log("\nDone.\n");
 }
 
 main().catch((e) => {

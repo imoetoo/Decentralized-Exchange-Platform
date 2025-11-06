@@ -70,7 +70,7 @@ async function main() {
   console.log(`Carol: ${ethers.formatEther(cEth)} ETH`);
   console.log("----------------------------------------");
 
-  console.log("\n✅ Balance check complete.\n");
+  console.log("\nBalance check complete.\n");
 }
 
 main().catch((e) => {

@@ -29,7 +29,7 @@ function log(message, color = colors.reset) {
 }
 
 function cleanDirectories() {
-  log("\n🧹 Cleaning old deployment files...", colors.yellow);
+  log("\nCleaning old deployment files...", colors.yellow);
 
   const dirsToClean = [
     path.join(__dirname, "../artifacts"),
@@ -40,7 +40,7 @@ function cleanDirectories() {
   dirsToClean.forEach((dir) => {
     if (fs.existsSync(dir)) {
       fs.rmSync(dir, { recursive: true, force: true });
-      log(`  ✓ Deleted ${path.basename(dir)}`, colors.green);
+      log(`  Deleted ${path.basename(dir)}`, colors.green);
     }
   });
 }
@@ -49,24 +49,24 @@ function runCommand(command, description) {
   log(`\n${description}...`, colors.blue);
   try {
     execSync(command, { stdio: "inherit", cwd: path.join(__dirname, "..") });
-    log(`  ✓ ${description} completed`, colors.green);
+    log(`  ${description} completed`, colors.green);
     return true;
   } catch (error) {
-    log(`  ✗ ${description} failed`, colors.red);
+    log(`  ${description} failed`, colors.red);
     return false;
   }
 }
 
 async function main() {
   log("\n" + "=".repeat(50), colors.bright);
-  log("🚀 Starting Full Deployment Process", colors.bright);
+  log("Starting Full Deployment Process", colors.bright);
   log("=".repeat(50) + "\n", colors.bright);
 
   // Step 1: Clean old files
   cleanDirectories();
 
   // Step 2: Compile contracts
-  if (!runCommand("npx hardhat compile", "📦 Compiling contracts")) {
+  if (!runCommand("npx hardhat compile", "Compiling contracts")) {
     process.exit(1);
   }
 
@@ -74,7 +74,7 @@ async function main() {
   if (
     !runCommand(
       "npx hardhat ignition deploy ./ignition/modules/Token.js --network localhost",
-      "💰 Deploying Mock Tokens"
+      "Deploying Mock Tokens"
     )
   ) {
     process.exit(1);
@@ -84,7 +84,7 @@ async function main() {
   if (
     !runCommand(
       "npx hardhat ignition deploy ./ignition/modules/Dex.js --network localhost",
-      "🏦 Deploying DEX Contract"
+      "Deploying DEX Contract"
     )
   ) {
     process.exit(1);
@@ -94,14 +94,14 @@ async function main() {
   if (
     !runCommand(
       "node scripts/copyDeployments.js",
-      "📋 Copying deployments to frontend"
+      "Copying deployments to frontend"
     )
   ) {
     process.exit(1);
   }
 
   log("\n" + "=".repeat(50), colors.bright);
-  log("✅ Deployment Complete!", colors.green + colors.bright);
+  log("Deployment Complete!", colors.green + colors.bright);
   log("=".repeat(50) + "\n", colors.bright);
 }
 

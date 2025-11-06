@@ -136,7 +136,7 @@ class BatchSolver {
         );
         
         if (sellOrders.length < 2) {
-            console.log("⚠️ Not enough sell orders for batch execution");
+            console.log("Not enough sell orders for batch execution");
             return;
         }
         

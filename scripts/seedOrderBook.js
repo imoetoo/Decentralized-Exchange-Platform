@@ -35,7 +35,7 @@ async function main() {
     signers[19], // 0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199
   ];
 
-  console.log("🚀 Starting Order Book Seeding...\n");
+  console.log("Starting Order Book Seeding...\n");
   console.log("Traders:");
   traders.forEach((t, i) => console.log(`  [${i}] ${t.address}`));
   console.log();
@@ -55,7 +55,7 @@ async function main() {
   };
 
   // Step 1: Mint tokens to all traders
-  console.log("💰 Minting tokens to traders...");
+  console.log("Minting tokens to traders...");
   const mintAmounts = {
     USDT: parseUnits("50000000"), // 50M USDT
     USDC: parseUnits("50000000"), // 50M USDC
@@ -71,10 +71,10 @@ async function main() {
       await (await token.mint(trader.address, mintAmounts[symbol])).wait();
     }
   }
-  console.log("✅ Tokens minted\n");
+  console.log("Tokens minted\n");
 
   // Step 2: Approve DEX for all traders
-  console.log("🔓 Approving DEX for all traders...");
+  console.log("Approving DEX for all traders...");
   for (const trader of traders) {
     for (const token of Object.values(tokens)) {
       await (
@@ -82,10 +82,10 @@ async function main() {
       ).wait();
     }
   }
-  console.log("✅ Approvals complete\n");
+  console.log("Approvals complete\n");
 
   // Step 3: Create orders for all trading pairs
-  console.log("📊 Creating order books...\n");
+  console.log("Creating order books...\n");
 
   // Helper function to place orders
   async function placeOrder(trader, action, base, quote, amount, price, label) {
@@ -109,13 +109,13 @@ async function main() {
         if (order.active) {
           console.log(`  ${label} [ID: ${orderId}]`);
         } else {
-          console.log(`  ⚠️  ${label} [ID: ${orderId}, MATCHED & FILLED]`);
+          console.log(`  Warning: ${label} [ID: ${orderId}, MATCHED & FILLED]`);
         }
       } else {
         console.log(`  ${label}`);
       }
     } catch (error) {
-      console.error(`  ❌ FAILED: ${label}`);
+      console.error(`  FAILED: ${label}`);
       console.error(`     Error: ${error.message}`);
       console.error(`     Reason: ${error.reason || "N/A"}`);
       console.error(
@@ -139,7 +139,7 @@ async function main() {
   }
 
   // ========== WETH/USDC Pair (Mid price: ~4000 USDC) ==========
-  console.log("🔷 WETH/USDC Order Book");
+  console.log("WETH/USDC Order Book");
   const wethAddr = addresses.MockWETH;
   const usdcAddr = addresses.MockUSDC;
 
@@ -239,7 +239,7 @@ async function main() {
   console.log();
 
   // ========== WBTC/USDT Pair (Mid price: ~120000 USDT) ==========
-  console.log("🟡 WBTC/USDT Order Book");
+  console.log("WBTC/USDT Order Book");
   const wbtcAddr = addresses.MockWBTC;
   const usdtAddr = addresses.MockUSDT;
 
@@ -339,7 +339,7 @@ async function main() {
   console.log();
 
   // ========== EIGEN/USDC Pair (Mid price: ~1.08 USDC) ==========
-  console.log("🟣 EIGEN/USDC Order Book");
+  console.log("EIGEN/USDC Order Book");
   const eigenAddr = addresses.MockEIGEN;
 
   // Buy orders (below market)
@@ -438,7 +438,7 @@ async function main() {
   console.log();
 
   // ========== PEPE/USDT Pair (Mid price: ~0.000007022 USDT per PEPE) ==========
-  console.log("🐸 PEPE/USDT Order Book");
+  console.log("PEPE/USDT Order Book");
   const pepeAddr = addresses.MockPEPE;
 
   // Buy orders (below market) - Using actual PEPE amounts with small decimals
@@ -538,7 +538,7 @@ async function main() {
   console.log();
 
   // ========== DAI/USDC Pair (Mid price: ~1.0 USDC) ==========
-  console.log("💚 DAI/USDC Order Book");
+  console.log("DAI/USDC Order Book");
   const daiAddr = addresses.MockDAI;
 
   // Buy orders (below market)
@@ -637,7 +637,7 @@ async function main() {
   console.log();
 
   // ========== USDC/USDT Pair (Reverse - Mid price: ~1.0 USDT) ==========
-  console.log("💵 USDC/USDT Order Book");
+  console.log("USDC/USDT Order Book");
 
   // Buy orders (below market)
   await placeOrder(
@@ -735,7 +735,7 @@ async function main() {
   console.log();
 
   // ========== USDT/USDC Pair (Reverse - Mid price: ~1.0 USDC) ==========
-  console.log("💵 USDT/USDC Order Book");
+  console.log("USDT/USDC Order Book");
 
   // Buy orders (below market)
   await placeOrder(
@@ -833,7 +833,7 @@ async function main() {
   console.log();
 
   // ========== USDC/WETH Pair (Reverse - Mid price: ~0.00025 WETH per USDC) ==========
-  console.log("🔷 USDC/WETH Order Book (Reverse)");
+  console.log("USDC/WETH Order Book (Reverse)");
 
   // Buy orders (buying USDC with WETH, below market = lower price)
   await placeOrder(
@@ -931,7 +931,7 @@ async function main() {
   console.log();
 
   // ========== USDT/WBTC Pair (Reverse - Mid price: ~0.00000833 WBTC per USDT) ==========
-  console.log("🟡 USDT/WBTC Order Book (Reverse)");
+  console.log("USDT/WBTC Order Book (Reverse)");
 
   // Buy orders (buying USDT with WBTC - want to pay LESS WBTC per USDT)
   // These should be BELOW the mid price - lower is better for buyers
@@ -1031,7 +1031,7 @@ async function main() {
   console.log();
 
   // ========== USDC/EIGEN Pair (Reverse - Mid price: ~0.926 EIGEN per USDC) ==========
-  console.log("🟣 USDC/EIGEN Order Book (Reverse)");
+  console.log("USDC/EIGEN Order Book (Reverse)");
 
   // Buy orders (buying USDC with EIGEN, below market = lower price)
   await placeOrder(
@@ -1129,7 +1129,7 @@ async function main() {
   console.log();
 
   // ========== USDT/PEPE Pair (Reverse - Mid price: ~142450 PEPE per USDT) ==========
-  console.log("🐸 USDT/PEPE Order Book (Reverse)");
+  console.log("USDT/PEPE Order Book (Reverse)");
 
   // Buy orders (buying USDT with PEPE, below market = lower price)
   // Price expressed as PEPE per 1 USDT
@@ -1228,7 +1228,7 @@ async function main() {
   console.log();
 
   // ========== USDC/DAI Pair (Reverse - Mid price: ~1.0 DAI per USDC) ==========
-  console.log("💚 USDC/DAI Order Book (Reverse)");
+  console.log("USDC/DAI Order Book (Reverse)");
 
   // Buy orders (buying USDC with DAI, below market = lower price)
   await placeOrder(
@@ -1326,16 +1326,16 @@ async function main() {
   console.log();
 
   // Summary
-  console.log("✅ Order book seeding complete!");
-  console.log("\n📊 Summary:");
+  console.log("Order book seeding complete!");
+  console.log("\nSummary:");
   console.log(
     "  - 12 trading pairs populated (6 base pairs + 6 reverse pairs)"
   );
-  console.log("\n✅ Order Book Seeding Complete!");
+  console.log("\nOrder Book Seeding Complete!");
   console.log("  - Total: 120 orders created");
   console.log("  - All orders non-intersecting (no immediate fills)");
   console.log("  - Realistic market spreads maintained");
-  console.log("\n🎯 Trading pairs ready:");
+  console.log("\nTrading pairs ready:");
   console.log("  Base pairs:");
   console.log("    - WETH/USDC (~$4,000)");
   console.log("    - WBTC/USDT (~$120,000)");
