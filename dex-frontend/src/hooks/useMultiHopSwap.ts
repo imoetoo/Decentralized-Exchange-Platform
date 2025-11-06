@@ -125,11 +125,14 @@ export function useMultiHopSwap() {
         args: [baseToken, quoteToken],
       })) as [readonly bigint[], readonly bigint[]];
 
-      // Get the order details we need
-      const ordersToCheck =
-        step.direction === "buy"
-          ? Array.from(sellOrders)
-          : Array.from(buyOrders);
+      // Determine which orders to use based on what we're spending
+      // If we're spending the base token (fromToken == baseToken), we take BUY orders
+      // If we're spending the quote token (fromToken == quoteToken), we take SELL orders
+      const isSpendingBase =
+        step.fromToken.toLowerCase() === baseToken.toLowerCase();
+      const ordersToCheck = isSpendingBase
+        ? Array.from(buyOrders) // Spend base, get quote
+        : Array.from(sellOrders); // Spend quote, get base
 
       if (ordersToCheck.length === 0) {
         throw new Error(
@@ -149,6 +152,10 @@ export function useMultiHopSwap() {
 
       // Order struct: [id, trader, action, base, quote, amount, filled, price, ts, active]
       const orderId = orderDetails[0];
+      const orderTrader = orderDetails[1];
+      const orderAction = orderDetails[2]; // 0 = BUY, 1 = SELL
+      const orderBase = orderDetails[3];
+      const orderQuote = orderDetails[4];
       const orderAmount = orderDetails[5];
       const orderFilled = orderDetails[6];
       const orderPrice = orderDetails[7];
@@ -161,31 +168,76 @@ export function useMultiHopSwap() {
       // Calculate how much base token we need to take from the order
       const inputAmountWei = parseUnits(inputAmount, decimals);
 
-      // IMPORTANT: In the contract, PRICE_PRECISION is 10^18
-      // But the seeded orders have prices in 6 decimals instead of 18 decimals
-      // So we need to adjust our calculation accordingly
-      const PRICE_PRECISION = BigInt("1000000000000000000"); // 10^18 (what contract expects)
-      const ACTUAL_PRICE_DECIMALS = BigInt("1000000"); // 10^6 (what the seeded data has)
+      console.log("=== SWAP STEP CALCULATION DEBUG ===");
+      console.log("Direction:", step.direction);
+      console.log("From:", step.fromSymbol, "To:", step.toSymbol);
+      console.log("Pair - Base:", baseToken, "Quote:", quoteToken);
+      console.log("Input amount (string):", inputAmount);
+      console.log("Input decimals:", decimals);
+      console.log("Input amount (wei):", inputAmountWei.toString());
+      console.log("Order ID:", bestOrderId.toString());
+      console.log("Order action:", orderAction === BigInt(0) ? "BUY" : "SELL");
+      console.log("Order base:", orderBase);
+      console.log("Order quote:", orderQuote);
+      console.log("Order price (from contract):", orderPrice.toString());
+      console.log("Order amount:", orderAmount.toString());
+      console.log("Order filled:", orderFilled.toString());
+      console.log("Order remain:", (orderAmount - orderFilled).toString());
 
-      // Scale the order price to proper PRICE_PRECISION
-      const adjustedPrice =
-        orderPrice * (PRICE_PRECISION / ACTUAL_PRICE_DECIMALS);
+      // IMPORTANT: The order prices are stored with 6 decimals in the seeded data
+      // Price represents: "quote token amount per base token amount"
+      // For example: price = 255 means each 1 (in base units) of USDC costs 255 (in base units) of WETH
+      // Which translates to: 0.000255 WETH per 1 USDC in decimal representation
 
       let baseAmount: bigint;
       let requiredQuoteAmount: bigint;
 
-      if (step.direction === "buy") {
-        // We're buying base with quote (spending our quote tokens)
-        // From contract: quoteAmount = (baseAmount * price) / PRICE_PRECISION
-        // So: baseAmount = (quoteAmount * PRICE_PRECISION) / price
-        const numerator = inputAmountWei * PRICE_PRECISION;
-        baseAmount = numerator / adjustedPrice;
-        requiredQuoteAmount = inputAmountWei;
-      } else {
-        // We're selling base for quote (spending our base tokens)
+      // The calculation depends on which token we're spending
+      if (isSpendingBase) {
+        // We're spending base token, getting quote token
+        // This means we're taking a BUY order (someone buying base with quote)
+        // baseAmount = what we're giving (our input)
+        // quoteAmount = what we're getting (calculated from price)
+        console.log("Spending BASE token:");
         baseAmount = inputAmountWei;
-        requiredQuoteAmount = (baseAmount * adjustedPrice) / PRICE_PRECISION;
+        requiredQuoteAmount = (baseAmount * orderPrice) / BigInt(1000000);
+        console.log("  baseAmount (spending):", baseAmount.toString());
+        console.log(
+          "  requiredQuoteAmount (receiving) = (baseAmount * orderPrice) / 1000000"
+        );
+        console.log(
+          "  = (",
+          baseAmount.toString(),
+          "*",
+          orderPrice.toString(),
+          ") / 1000000"
+        );
+        console.log("  = ", requiredQuoteAmount.toString());
+      } else {
+        // We're spending quote token, getting base token
+        // This means we're taking a SELL order (someone selling base for quote)
+        // quoteAmount = what we're giving (our input)
+        // baseAmount = what we're getting (calculated from price)
+        console.log("Spending QUOTE token:");
+        requiredQuoteAmount = inputAmountWei;
+        baseAmount = (inputAmountWei * BigInt(1000000)) / orderPrice;
+        console.log(
+          "  requiredQuoteAmount (spending):",
+          requiredQuoteAmount.toString()
+        );
+        console.log(
+          "  baseAmount (receiving) = (quoteAmount * 1000000) / orderPrice"
+        );
+        console.log(
+          "  = (",
+          inputAmountWei.toString(),
+          "* 1000000 ) /",
+          orderPrice.toString()
+        );
+        console.log("  = ", baseAmount.toString());
       }
+      console.log("Final baseAmount to take:", baseAmount.toString());
+      console.log("=== END DEBUG ===");
 
       // Make sure the order has enough liquidity
       const available = BigInt(orderAmount) - BigInt(orderFilled);
@@ -196,7 +248,7 @@ export function useMultiHopSwap() {
             `Input: ${formatUnits(
               inputAmountWei,
               decimals
-            )}, Price: ${formatUnits(adjustedPrice, 18)}`
+            )}, Price: ${formatUnits(orderPrice, 6)}`
         );
       }
 
@@ -206,6 +258,36 @@ export function useMultiHopSwap() {
             available,
             decimals
           )} ` + `but we need ${formatUnits(baseAmount, decimals)}`
+        );
+      }
+
+      console.log("About to call takeOrder:");
+      console.log("  Order ID:", bestOrderId.toString());
+      console.log("  BaseAmount:", baseAmount.toString());
+      console.log(
+        "  This means we're taking",
+        baseAmount.toString(),
+        "base units from the order"
+      );
+
+      // The contract will expect us to transfer:
+      // If order.action == SELL: we send quoteAmount of quoteToken, receive baseAmount of baseToken
+      // If order.action == BUY: we send baseAmount of baseToken, receive quoteAmount of quoteToken
+      if (orderAction === BigInt(1)) {
+        // SELL order
+        console.log(
+          "  We need to send:",
+          requiredQuoteAmount.toString(),
+          "quote tokens"
+        );
+        console.log("  We will receive:", baseAmount.toString(), "base tokens");
+      } else {
+        // BUY order
+        console.log("  We need to send:", baseAmount.toString(), "base tokens");
+        console.log(
+          "  We will receive:",
+          requiredQuoteAmount.toString(),
+          "quote tokens"
         );
       }
 
@@ -220,22 +302,19 @@ export function useMultiHopSwap() {
       // Wait for transaction to confirm
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-      // Calculate actual output amount
-      // Remember: adjustedPrice = orderPrice * (10^18 / 10^6) for the calculation
-      // But for the actual contract, orderPrice is the raw value in 6 decimals
+      // Calculate actual output amount based on what we receive
       let outputAmount: bigint;
-      if (step.direction === "buy") {
-        // When buying, we spend quote and get base
-        // The baseAmount is what we receive
-        outputAmount = baseAmount;
+      if (isSpendingBase) {
+        // We spent base, we received quote
+        outputAmount = requiredQuoteAmount;
       } else {
-        // When selling, we spend base and get quote
-        // quoteAmount = (baseAmount * price) / PRICE_PRECISION
-        // But we need to use the ADJUSTED price since we're working in the proper scale
-        outputAmount = (baseAmount * adjustedPrice) / PRICE_PRECISION;
+        // We spent quote, we received base
+        outputAmount = baseAmount;
       }
 
-      return formatUnits(outputAmount, decimals);
+      // Return the formatted output amount
+      const formattedOutput = formatUnits(outputAmount, decimals);
+      return formattedOutput;
     },
     [address, publicClient, writeContractAsync]
   );
@@ -276,6 +355,10 @@ export function useMultiHopSwap() {
 
           // Execute the swap for this step
           const outputAmount = await executeSwapStep(step, currentAmount);
+
+          console.log(`Step ${i + 1} executed:`);
+          console.log(`  Input: ${currentAmount} ${step.fromSymbol}`);
+          console.log(`  Output: ${outputAmount} ${step.toSymbol}`);
 
           // Update current amount for next step
           currentAmount = outputAmount;
