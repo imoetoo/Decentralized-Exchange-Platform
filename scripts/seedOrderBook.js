@@ -692,9 +692,9 @@ async function main() {
     1,
     usdcAddr,
     usdtAddr,
-    parseUnits("1000", 6),
+    parseUnits("100000", 6),
     parseUnits("1.0005", 6),
-    "SELL 1000 USDC @ 1.0005"
+    "SELL 100000 USDC @ 1.0005"
   );
   await placeOrder(
     traders[1],
@@ -790,9 +790,9 @@ async function main() {
     1,
     usdtAddr,
     usdcAddr,
-    parseUnits("1000", 6),
+    parseUnits("100000", 6),
     parseUnits("1.0005", 6),
-    "SELL 1000 USDT @ 1.0005"
+    "SELL 100000 USDT @ 1.0005"
   );
   await placeOrder(
     traders[1],
