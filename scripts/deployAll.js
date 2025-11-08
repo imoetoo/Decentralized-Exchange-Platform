@@ -7,9 +7,8 @@ This file automates the full deployment process:
 3. Deploys Mock Tokens using Hardhat Ignition.
 4. Deploys the DEX contract using Hardhat Ignition.
 5. Copies deployment addresses to the frontend directory.
-
-NOTE: Your current data might be lost since this script deletes old deployment files.
 */
+
 const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");

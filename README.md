@@ -1,59 +1,53 @@
-# SC4053 Blockchain Technology Development Project <br> <br> ----------------------------------------- <br> | Option 1: Decentralized Exchanges | <br> ----------------------------------------- 
+# SC4053 Blockchain Technology Development Project <br> <br> -------------------------------------------- <br> | &nbsp; Option 1: Decentralized Exchanges &nbsp; | <br> -------------------------------------------- 
 
 ## 1. Introduction
 
-TBD
+A Decentralized Exchange (DEX) is a blockchain-based platform that facilitates peer-to-peer trading of cryptocurrencies without the need for intermediaries. Unlike centralized exchanges, users of DEXs retain control of their private keys and funds, ensuring autonomy and minimized trust assumptions. Moreover, DEXs operate on smart contracts, which provide transparency and open security.
+
+This project builds a robust and user-friendly DEX that supports various functionalities such as token swaps, portfolio management, and real-time order book updates. By leveraging Ethereum's blockchain technology, the DEX aims to provide a seamless trading experience while maintaining decentralization and trustlessness.
 
 ## 2. Features
 
-### 2.1 Portfolio Page
+### 2.1 Wallet & Network Connection
 
-The portfolio page provides a comprehensive view of your token holdings with real-time pricing:
+At the top right corner of the Webpage, users can connect their cryptocurrency wallets to interact with the platform. Supported wallet providers include MetaMask, WalletConnect, and Coinbase Wallet.
 
-**Features:**
+Users can also switch between different networks, such as Ethereum Mainnet and Optimism, to access various trading pairs and liquidity pools. To connect to Localhost, please select "Anvil".
 
-- **Total Assets Display**: Shows the total value of all your tokens in USD at the top of the page
-- **Token Balance List**: Displays all tokens in your wallet with their balances
-- **Real-Time USD Valuation**: Each token shows its USD value based on the highest bid price from the order book
-- **Token Icons**: Visual representation of each token with custom images
-- **Automatic Price Updates**: Prices are fetched from the DEX order book every 10 seconds
-- **Multi-Pair Support**: Supports pricing from both direct (TOKEN/USDC, TOKEN/USDT) and inverse (USDC/TOKEN, USDT/TOKEN) trading pairs
+### 2.2 Portfolio Page
 
-**How to Access:**
+The portfolio page displays all of your token holdings with real-time pricing for the chosen account and network. The pricing is based on the highest buy order (best bid) from the DEX order book, and updates automatically every 10 seconds. USDC and USDT are treated as $1.00 stablecoins.
+ 
+### 2.3 Market Page
 
-1. Connect your wallet to the DEX frontend
-2. Navigate to the "Portfolio" page from the header menu
-3. View your token balances and total asset value in USD
+The market page displays the various trading pairs avaliable. Currently, we support the following trading pairs (as well as their inverses):
+- USDC/USDT
+- WETH/USDC
+- WBTC/USDT
+- EIGEN/USDC
+- PEPE/USDT
+- DAI/USDC
 
-**Price Calculation:**
+If we select a trading pair, we will be redirected to the trading interface for that pair, which includes the order book and Place Order form.
 
-- Prices are determined by the highest buy order (best bid) in the order book
-- For tokens with inverse pairs (e.g., USDT/WBTC), the price is automatically inverted
-- USDC and USDT are treated as $1.00 stablecoins
+The Order Book shows the current buy and sell orders for the selected trading pair, allowing users to see market depth and liquidity.
 
-### 2.2 Trading Pair Swap
+In the Place Order form, users can choose from the following order types:
+- **Limit Order**: Specify the price and amount to buy or sell a token. The order will be added to the order book and executed when a matching order is found.
 
-Quickly switch between trading perspectives for any token pair:
+- **Market Order**: Instantly buy or sell a token at the best available price in the order book. The order is executed immediately against existing orders.
 
-**Features:**
+- **Take Order**: Similar to a market order, but allows users to specify the amount they want to trade. The order will be executed against the best available prices until the specified amount is fulfilled.
 
-- **One-Click Swap**: Click the swap icon in the market header to instantly reverse the trading pair
-- **Automatic Redirection**: Swaps between TOKEN1/TOKEN2 ↔ TOKEN2/TOKEN1
-- **Maintains Context**: Keeps you on the same tokens, just switches base and quote
-- **Order Book Inversion**: The order book updates to show the opposite perspective
+- **Stop Limit Order**: Set a trigger price and a limit price. When the trigger price is reached, a limit order is placed at the specified limit price.
 
-**Example Use Cases:**
+### 2.4 Token Swap Page
 
-- View WBTC/USDT to see how much USDT you need to buy WBTC
-- Swap to USDT/WBTC to see how much WBTC you can get for your USDT
-- Compare liquidity and prices from both perspectives
+If the trading pair does not exist in the Market Page, users can still perform token swaps using the Swap feature. This feature allows users to exchange one token for another directly from their wallet without needing to create an order in the order book. DEX will automatically find the best available prices from the order book to execute the swap using Dijkstra's algorithm.
 
-**How to Use:**
+### 2.5 My Orders Page
 
-1. Navigate to any trading pair (e.g., WBTC/USDT)
-2. Click the swap icon (↔) in the market header
-3. The page will reload with the inverse pair (USDT/WBTC)
-
+Users can view their Open Orders, Buy Orders, Sell Orders, and Trade History on the My Orders page. Users can also cancel their open orders directly from this page.
 
 ## 3. Getting Started: Local Deployment
 
@@ -129,15 +123,27 @@ The smart contracts we will be deploying are in the `contracts` folder.
 
 - `Dex.sol` - The key section of our project. It supports functionalities such as placing limit orders, cancelling orders, and executing trades between different token pairs.
 
-Let's deploy the smart contracts to the local blockchain network! 
+Let's compile and deploy the smart contracts to the local blockchain network! 
 
-4. Run `npx hardhat ignition deploy ignition/modules/Token.js --network localhost` - This compiles `contracts/Token.sol` and deploys it to the local blockchain network, creating multiple mock tokens.
+4. Run `npx hardhat compile` - This compiles all the smart contracts in the `contracts` folder.
+
+   Alternatively, you can run the shortcut `npm run compile`, which is defined in `package.json`.
+
+   - Hardhat reads the Solidity code and compiles it into bytecode and ABI (Application Binary Interface). They are stored in `artifacts` folder.
+
+   Example output:
+
+   ```bash
+   Compiling 2 files with 0.8.18
+   Compilation finished successfully
+   ```
+
+5. Run `npx hardhat ignition deploy ignition/modules/Token.js --network localhost` - This deploys multiple instances of `Token.sol` to the local blockchain network.
 
    Alternatively, you can run the shortcut `npm run deploy:mock`, which is defined in `package.json`.
 
-   - Hardhat reads `Token.sol` and compiles Solidity code into bytecode and ABI (Application Binary Interface). They are stored in `artifacts` folder.
    - Information on how the contracts should be deployed is defined in `ignition/modules/Token.js`. In this file, we specify that multiple instances of `Token` should be deployed with different names and symbols.
-   - Hardhat then connects to the local blockchain network (localhost:8545) and deploys the compiled contract. The transaction is sent from Account #0 (see private key).
+   - Hardhat connects to the local blockchain network (localhost:8545) and deploys the compiled contract. The transaction is sent from Account #0 (see address).
    - The new contracts' addressess are saved to `ignition/deployments/chain-31337/deployed_addresses.json` (31337 is Hardhat's chain ID). They will be later retrieved by other scripts.
 
    Example output (Terminal 1):
@@ -169,11 +175,11 @@ Let's deploy the smart contracts to the local blockchain network!
    TokensModule#MockUSDT - 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
    ```
 
-5. Run `npx hardhat ignition deploy ignition/modules/Dex.js --network localhost` - This compiles `contracts/Dex.sol` and deploys it to the local blockchain network.
+6. Run `npx hardhat ignition deploy ignition/modules/Dex.js --network localhost` - This deploys the `Dex.sol` contract to the local blockchain network.
 
    Alternatively, you can run the shortcut `npm run deploy:dex`, which is also defined in `package.json`.
 
-   - Similar to step 4, Hardhat reads `Dex.sol`, compiles it, and deploys it to the local blockchain network according to the rules defined in `ignition/modules/Dex.js`. The address is also saved to `deployed_addresses.json`.
+   - Similar to step 5, Hardhat connects to the local blockchain network (localhost:8545) and deploys the compiled `Dex` contract. The transaction is sent from Account #0 (see private key). The address is also saved to `deployed_addresses.json`.
 
    Example output (Terminal 1):
 
@@ -194,14 +200,15 @@ Let's deploy the smart contracts to the local blockchain network!
    DexModule#Dex - 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
    ```
 
+7. Run `hardhat run --network localhost scripts/copyDeployments.js` - This script copies the deployed contract addresses from `ignition/deployments/chain-31337/deployed_addresses.json` to `dex-frontend/src/deployed_addresses.json`. This will be useful when configuring the frontend later.
+
 We have successfully deployed the smart contracts to the local blockchain network! <br>
 
-To simplify the above 2 steps, we can instead run the shortcut `npm run deploy:all`, which calls the script `ignition/deployAll.js`. This script will first clean previous deployments and then compiles and deploy both the Token and Dex modules in sequence. It will then copy the deployment addresses to the frontend directory, which will be useful when configuring the frontend later.
-
+To simplify the above 4 steps, we can instead run the shortcut `npm run deploy:all`, which calls the script `ignition/deployAll.js`. This script will also clean previous deployments first.
 
 Now, let's populate the DEX with some fake data to simulate real trading activities. This is termed "seeding" the DEX.
 
-6. Run `hardhat run --network localhost scripts/seedOrderBook.js` or the shortcut `npm run seedOrder`.    
+8. Run `hardhat run --network localhost scripts/seedOrderBook.js` or the shortcut `npm run seedOrder`.    
    - It reads deployed contract addresses of DEX and token contracts from `iginition/deployment/chain-31337/deployed_addresses.json`.
    - We use account 15–19 from Hardhat to simulate traders that place orders. For each account, we allocate substantial amount of tokens of each type so that they have sufficient balances to place orders. This is termed "minting" tokens to the traders.
    - Each trader approves the DEX contract to spend their tokens on their behalf.
@@ -288,19 +295,23 @@ Now, let's populate the DEX with some fake data to simulate real trading activit
       ...
    ```
 
+9. Run `hardhat run --network localhost scripts/mintTokensToAccount.js` or the shortcut `npm run mint`.    
+   - This mints mock tokens to Account #1 (Alice), Account #2 (Bob), and Account #3 (Carol) for testing purposes.
+   - You may use these accounts to interact with the DEX frontend later.
+
 Let's review the purpose of each folder in the repository:
 
 ```
 SC4053-Project/
 │
-├── artifacts/           ← 📦 Bytecode and ABI compiled from contract Solidity code (auto-generated)
-├── cache/               ← 💾 Compilation cache (auto-generated)
-├── contracts/           ← 📝 Smart contracts source codes (Solidity)
-├── dex-frontend/        ← 🌐 User interface (Next.js)
-├── ignition/            ← 🚀 Define how contracts are deployed and track current deployments
-|    ├── deployments/    ← 📂 Track deployed contract addresses
-|    └── modules/        ← 📄 Define how each contract is deployed
-└── scripts/             ← 🔧 Interact with deployed contracts
+├── artifacts/           ← Bytecode and ABI compiled from contract Solidity code (auto-generated)
+├── cache/               ← Compilation cache (auto-generated)
+├── contracts/           ← Smart contracts source codes (Solidity)
+├── dex-frontend/        ← User interface (Next.js)
+├── ignition/            ← Define how contracts are deployed and track current deployments
+|    ├── deployments/    ← Track deployed contract addresses
+|    └── modules/        ← Define how each contract is deployed
+└── scripts/             ← Interact with deployed contracts
 ```
 
 ### 3.2 Frontend
@@ -358,7 +369,7 @@ We will now set up the frontend to interact with the smart contracts deployed on
    Lit is in dev mode. Not recommended for production! See <https://lit.dev/msg/dev-mode> for more information.
    ```
 
-6. Open your web browser and navigate to <http://localhost:3000> - This opens the frontend interface of the DEX application.
+6.Once compiled, you can open your web browser and navigate to <http://localhost:3000> - This opens the frontend interface of the DEX application.
 
 ### 3.3 Configure Frontend to connect to Local Blockchain
 
@@ -386,7 +397,7 @@ In this tutorial, we will be using MetaMask as our Ethereum wallet to connect to
 
    Click "Save" to add the network. You can safely ignore any warnings.
 
-2. Import test accounts (account 15 to 19) of your choice into MetaMask using their private keys displayed in Terminal 1 when you started the local blockchain network.
+2. Import test accounts (Account #1, #2, #3) of your choice into MetaMask using their private keys displayed in Terminal 1 when you started the local blockchain network.
 
    - Click on the account icon at the top right corner of MetaMask and select "Import Account".
    - Paste the private key of the account you want to import and click "Import".
@@ -396,5 +407,11 @@ In this tutorial, we will be using MetaMask as our Ethereum wallet to connect to
 
 4. Navigate to top left corner of https://localhost:3000 and connect your MetaMask wallet to the frontend.
 
+You have now successfully connected the DEX frontend to the local blockchain network! You can now interact with the DEX using the imported accounts and test tokens!
+
+Author: Phua Guan Yuan, Wu Meng Jun, Le Yanzhi <br>
+NTU AY2025/26 Semester 1
 
 
+
+ 
