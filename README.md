@@ -16,7 +16,7 @@ Users can also switch between different networks, such as Ethereum Mainnet and O
 
 ### 2.2 Portfolio Page
 
-The portfolio page displays all of your token holdings with real-time pricing for the chosen account and network. The pricing is based on the highest buy order (best bid) from the DEX order book, and updates automatically every 10 seconds. USDC and USDT are treated as $1.00 stablecoins.
+The portfolio page displays all of your token holdings with real-time pricing for the chosen account and network. The pricing is based on the highest buy order (best bid) from the DEX order book, and updates automatically every 10 seconds.
  
 ### 2.3 Market Page
 
