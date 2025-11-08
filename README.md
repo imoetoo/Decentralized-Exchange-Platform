@@ -369,7 +369,7 @@ We will now set up the frontend to interact with the smart contracts deployed on
    Lit is in dev mode. Not recommended for production! See <https://lit.dev/msg/dev-mode> for more information.
    ```
 
-6.Once compiled, you can open your web browser and navigate to <http://localhost:3000> - This opens the frontend interface of the DEX application.
+6. Once compiled, you can open your web browser and navigate to <http://localhost:3000> - This opens the frontend interface of the DEX application.
 
 ### 3.3 Configure Frontend to connect to Local Blockchain
 
