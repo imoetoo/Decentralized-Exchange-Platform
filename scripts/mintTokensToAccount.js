@@ -49,7 +49,7 @@ async function main() {
     console.log(`${sym} balances:`, balances.map((b) => ethers.formatUnits(b, 6)));
   }
 
-  console.log("✅ Minting done.");
+  console.log("Minting done.");
 }
 
 main().catch((e) => (console.error(e), process.exit(1)));
