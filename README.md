@@ -91,7 +91,7 @@ We will proceed to set up Terminal 1 first followed by Terminal 2.
    - \<One-time setup step\>
    - One important dependency is `hardhat` - a development tool for Ethereum to run fake blockchains on personal computers for testing, compile and deploy smart contracts to compile, and test without spending real money. `ignition` is a plugin for Hardhat that simplifies contract deployment and management.
 
-3. Run `npx hardhat node` - This creates a private Ethereum blockchain locally for testing purposes.
+3. Run `npx hardhat node --hostname 127.0.0.1 --port 8545e` - This creates a private Ethereum blockchain locally for testing purposes.
 
    - Started a server at <http://127.0.0.1:8545> (localhost: port 8545)
    - Generates 20 test accounts with 10000 ETH each. Their private keys are displayed in the terminal.
@@ -116,6 +116,8 @@ We will proceed to set up Terminal 1 first followed by Terminal 2.
    ...
    ```
 
+   Alternatively, you can run the shortcut `npm run node`, which is defined in `package.json`.
+
 We have now set up the blockchain network! <br>
 We will now set up Terminal 2: The Client. Remenber to open a new terminal window and keep Terminal 1 running!
 
@@ -131,7 +133,7 @@ Let's deploy the smart contracts to the local blockchain network!
 
 4. Run `npx hardhat ignition deploy ignition/modules/Token.js --network localhost` - This compiles `contracts/Token.sol` and deploys it to the local blockchain network, creating multiple mock tokens.
 
-   Alternatively, you can run the shortcut `npm run deploy:mock`. This shortcut is defined in `package.json`.
+   Alternatively, you can run the shortcut `npm run deploy:mock`, which is defined in `package.json`.
 
    - Hardhat reads `Token.sol` and compiles Solidity code into bytecode and ABI (Application Binary Interface). They are stored in `artifacts` folder.
    - Information on how the contracts should be deployed is defined in `ignition/modules/Token.js`. In this file, we specify that multiple instances of `Token` should be deployed with different names and symbols.
@@ -201,7 +203,7 @@ Now, let's populate the DEX with some fake data to simulate real trading activit
 
 6. Run `hardhat run --network localhost scripts/seedOrderBook.js` or the shortcut `npm run seedOrder`.    
    - It reads deployed contract addresses of DEX and token contracts from `iginition/deployment/chain-31337/deployed_addresses.json`.
-   - We use account 15–19 from Hardhat as test accounts (traders) to place orders. For each account, we allocate substantial amount of tokens of each type so that they have sufficient balances to place orders. This is termed "minting" tokens to the traders.
+   - We use account 15–19 from Hardhat to simulate traders that place orders. For each account, we allocate substantial amount of tokens of each type so that they have sufficient balances to place orders. This is termed "minting" tokens to the traders.
    - Each trader approves the DEX contract to spend their tokens on their behalf.
    - We create 12 trading pairs (6 base pairs + 6 reverse pairs) with realistic prices and amounts.
       - Base pairs: WETH/USDC, WBTC/USDT, EIGEN/USDC, PEPE/USDT, DAI/USDC, USDC/USDT

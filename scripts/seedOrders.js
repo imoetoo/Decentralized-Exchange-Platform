@@ -9,7 +9,7 @@ async function main() {
   
   const [deployer, alice, bob, charlie] = await ethers.getSigners();
 
-  console.log("🌱 Seeding orders with profitable cycles...");
+  console.log("Seeding orders with profitable cycles...");
   console.log("User addresses:", { 
     alice: alice.address, 
     bob: bob.address, 
