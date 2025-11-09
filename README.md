@@ -85,7 +85,7 @@ We will proceed to set up Terminal 1 first followed by Terminal 2.
    - \<One-time setup step\>
    - One important dependency is `hardhat` - a development tool for Ethereum to run fake blockchains on personal computers for testing, compile and deploy smart contracts to compile, and test without spending real money. `ignition` is a plugin for Hardhat that simplifies contract deployment and management.
 
-3. Run `npx hardhat node --hostname 127.0.0.1 --port 8545e` - This creates a private Ethereum blockchain locally for testing purposes.
+3. Run `npx hardhat node --hostname 127.0.0.1 --port 8545` - This creates a private Ethereum blockchain locally for testing purposes.
 
    - Started a server at <http://127.0.0.1:8545> (localhost: port 8545)
    - Generates 20 test accounts with 10000 ETH each. Their private keys are displayed in the terminal.
