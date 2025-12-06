@@ -29,3 +29,6 @@ coverage.json
 # Ignition / Deployments
 ignition/deployments/
 ignition/journal.jsonl
+
+#macOS Finder metadata
+.DS_Store
